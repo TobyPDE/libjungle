@@ -8,58 +8,6 @@
 
 using namespace decision_jungle;
 
-int main(int a, char** b)
-{
-    int N = 20000;
-    
-    TrainingSet::ptr trainingSet = TrainingSet::Factory::create();
-    
-    std::normal_distribution<> norm1(-1, 0.5);
-    std::normal_distribution<> norm2(1, 0.5);
-    std::normal_distribution<> norm3(25, 0.5);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    
-    std::cout << "Create random training set" << std::endl;
-    
-    for (int i = 0; i < N/4; i++)
-    {
-        TrainingExample::ptr current = TrainingExample::Factory::createZeroInitialized(2, 0);
-        (*current->getDataPoint())[0] = norm1(gen);
-        (*current->getDataPoint())[1] = norm3(gen);
-        trainingSet->push_back(current);
-    }
-    
-    for (int i = N/4; i < N/2; i++)
-    {
-        TrainingExample::ptr current = TrainingExample::Factory::createZeroInitialized(2, 1);
-        (*current->getDataPoint())[0] = norm2(gen);
-        (*current->getDataPoint())[1] = norm2(gen);
-        trainingSet->push_back(current);
-    }
-    
-    for (int i = N/2; i < 3*N/4; i++)
-    {
-        TrainingExample::ptr current = TrainingExample::Factory::createZeroInitialized(2, 2);
-        (*current->getDataPoint())[0] = norm1(gen);
-        (*current->getDataPoint())[1] = norm2(gen);
-        trainingSet->push_back(current);
-    }
-    
-    for (int i = 3*N/4; i < N; i++)
-    {
-        TrainingExample::ptr current = TrainingExample::Factory::createZeroInitialized(2, 3);
-        (*current->getDataPoint())[0] = norm2(gen);
-        (*current->getDataPoint())[1] = norm1(gen);
-        trainingSet->push_back(current);
-    }
-    
-    JungleTrainer::ptr jungleTrainer = JungleTrainer::Factory::create();
-    jungleTrainer->setNumDAGs(150);
-    Jungle::ptr jungle = jungleTrainer->train(trainingSet);
-    return 0;
-}
-
 void AbstractTrainer::validateParameters() throw(ConfigurationException)
 {
     if (maxDepth < 1)
