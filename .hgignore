@@ -1,4 +1,5 @@
 syntax: glob
+config.h
 jungle
 CMakeCache.txt
 CMakeFiles
