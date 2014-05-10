@@ -1,4 +1,5 @@
 syntax: glob
+jungle
 CMakeCache.txt
 CMakeFiles
 Makefile
