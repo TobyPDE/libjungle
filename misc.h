@@ -21,7 +21,7 @@
  * You can throw a new exception by: throw classname("Error message");
  */
 #define DEFINE_EXCEPTION(classname)		\
-	class classname : std::exception {	\
+	class classname : public std::exception {	\
 	public:		\
 		classname() { this->ptrMessage = 0; };	\
 		classname(const char* _ptrMessage) : ptrMessage(_ptrMessage) {};	\

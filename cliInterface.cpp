@@ -70,7 +70,7 @@ ArgumentBag::ptr ArgumentBag::Factory::createFromCLIArguments(const int start, c
             else
             {
                 // There is an assignment
-                result->getParameters()[parameter.substr(1, equalPos - 1)] = parameter.substr(equalPos, parameter.size() - equalPos);
+                result->getParameters()[parameter.substr(1, equalPos - 1)] = parameter.substr(equalPos+1, parameter.size() - equalPos);
             }
         }
         else
