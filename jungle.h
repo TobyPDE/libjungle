@@ -433,6 +433,22 @@ namespace decision_jungle
         }
     
         /**
+         * This is only for debug purposes
+         */
+        void traverse()
+        {
+            printf("%p: [f: %d, t: %2.5f, l: %p, r: %p] -> %d\n", this, getFeatureID(), getThreshold(), getLeft().get(), getRight().get(), getClassLabel());
+            if (left)
+            {
+                left->traverse();
+            }
+            if (right)
+            {
+                right->traverse();
+            }
+        }
+        
+        /**
          * A factory for DAGNodes
          */
         class Factory {

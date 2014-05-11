@@ -13,6 +13,7 @@
 #include <iostream>
 #include <iomanip>
 #include <random>
+#include <exception>
 
 
 using namespace decision_jungle;
@@ -36,17 +37,11 @@ int main(int argc, const char** argv)
         // Execute the requested function
         return function->execute();
     }
-    catch (CLIFunctionNotFoundException & e) {
+    catch (std::exception & e) {
         std::cout << "There was an error." << std::endl;
         std::cout << " -> " << e.what() << std::endl;
         std::cout << "Please see '$ jungle help' for more information." << std::endl;
         return 1;
-    }
-    catch (RuntimeException & e) {
-        std::cout << "There was an error." << std::endl;
-        std::cout << " -> " << e.what() << std::endl;
-        std::cout << "Please see '$ jungle help' for more information." << std::endl;
-        return 2;
     }
 }
 
@@ -59,7 +54,7 @@ ArgumentBag::ptr ArgumentBag::Factory::createFromCLIArguments(const int start, c
     for (int i = start; i < argc; i++)
     {
         // Is this a parameter or an argument?
-        if (argv[i][1] == '-')
+        if (argv[i][0] == '-')
         {
             // This is a parameter
             // Check if there is an assignment (i.e. if there is a = sign)
