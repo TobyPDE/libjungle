@@ -678,7 +678,7 @@ namespace decision_jungle
             printf("] %4d/%4d (%2.1f%%)", _state, total, progress*100);
             
             // Stop when we reached the end
-            if (state == total)
+            if (state >= total)
             {
                 printf("\n");
             }
