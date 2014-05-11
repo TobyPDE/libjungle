@@ -641,18 +641,24 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
     }
     
     ProgressBar::ptr progressBar = ProgressBar::Factory::create(getNumDAGs());
+    if (getVerboseMode())
+    {
+        progressBar->update(0);
+        std::cout.flush();
+    }
     for (int i = 0; i < numDAGs; i++)
     {
-        if (getVerboseMode())
-        {
-            progressBar->update();
-        }
-        
         // Create a training set for each DAG by sampling from the given training set
         TrainingSet::ptr sampledSet = TrainingSet::Factory::createBySampling(trainingSet, numTrainingSamples);
         
         DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(shared_from_this(), sampledSet);
         jungle->getDAGs().insert(trainer->train());
+        
+        if (getVerboseMode())
+        {
+            progressBar->update();
+            std::cout.flush();
+        }
     }
     
     return jungle;
