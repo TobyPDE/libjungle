@@ -11,6 +11,7 @@
 #include "jungle.h"
 #include "jungleTrain.h"
 #include <iostream>
+#include <iomanip>
 #include <random>
 
 
@@ -37,9 +38,15 @@ int main(int argc, const char** argv)
     }
     catch (CLIFunctionNotFoundException & e) {
         std::cout << "There was an error." << std::endl;
-        std::cout << "Message: " << e.what() << std::endl;
+        std::cout << " -> " << e.what() << std::endl;
         std::cout << "Please see '$ jungle help' for more information." << std::endl;
         return 1;
+    }
+    catch (RuntimeException & e) {
+        std::cout << "There was an error." << std::endl;
+        std::cout << " -> " << e.what() << std::endl;
+        std::cout << "Please see '$ jungle help' for more information." << std::endl;
+        return 2;
     }
 }
 
@@ -94,7 +101,17 @@ AbstractCLIFunction::ptr AbstractCLIFunction::Factory::createFromArgumentBag(Arg
     _argumentBag->getArguments().erase(_argumentBag->getArguments().begin());
     
     // Search for the function in the registered functions
-    ClassMap::iterator it = functionMap.find(functionName);
+    AbstractCLIFunction::ptr result = AbstractCLIFunction::Factory::createFromName(functionName);
+    // Assign the argument bag
+    result->arguments = _argumentBag;
+    
+    return result;
+}
+
+AbstractCLIFunction::ptr AbstractCLIFunction::Factory::createFromName(const std::string & _name) throw(CLIFunctionNotFoundException)
+{
+    // Search for the function in the registered functions
+    ClassMap::iterator it = functionMap.find(_name);
     if (it == functionMap.end())
     {
         // The function name is unknown
@@ -102,28 +119,90 @@ AbstractCLIFunction::ptr AbstractCLIFunction::Factory::createFromArgumentBag(Arg
     }
     
     AbstractCLIFunction::ptr result(it->second());
-    // Assign the argument bag
-    result->arguments = _argumentBag;
+    return result;
+}
+
+std::vector<std::string> AbstractCLIFunction::Factory::getRegisteredNames()
+{
+    std::vector<std::string> result;
+    
+    // Create the key vector
+    for (ClassMap::iterator it = functionMap.begin(); it != functionMap.end(); ++it)
+    {
+        result.push_back(it->first);
+    }
     
     return result;
 }
 
-int HelpCLIFunction::execute()
+int HelpCLIFunction::displayGlobalHelp()
 {
-    std::cout << "Execute help" << std::endl;
+    // Display the the default help dialog
+    // All functions are listed with their short text
+    std::cout << "Decision Jungle Library" << std::endl << std::endl;
+    std::cout << "List of commands:" << std::endl << std::endl;
+    
+    // Get all commands
+    std::vector<std::string> commandNames = AbstractCLIFunction::Factory::getRegisteredNames();
+    
+    for (std::vector<std::string>::iterator it = commandNames.begin(); it != commandNames.end(); ++it)
+    {
+        // Create an instance of the current function in order to access the short help text
+        AbstractCLIFunction::ptr currentFunction = AbstractCLIFunction::Factory::createFromName(*it);
+        std::cout << ' ' << std::setw(15) << std::left << *it << ' ' << currentFunction->shortHelp() << std::endl;
+    }
+    std::cout << std::endl;
+    std::cout << "For more information about a certain command call: " << std::endl;
+    std::cout << " $ jungle help {command}" << std::endl; 
     return 0;
 }
 
+int HelpCLIFunction::displayFunctionHel(const std::string& _name)
+{
+    try {
+        // Try to get an instance of this function
+        AbstractCLIFunction::ptr function = AbstractCLIFunction::Factory::createFromName(_name);
+        // Display the help dialog
+        std::cout << function->help() << std::endl;
+        return 0;
+    }
+    catch (CLIFunctionNotFoundException & e) {
+        std::cout << "The requested function could not be found." << std::endl;
+        return 1;
+    }
+}
+
+int HelpCLIFunction::execute()
+{
+    // Is there a function requested?
+    if (this->getArguments()->getArguments().size() > 0)
+    {
+        // Yes, displays the help of this function
+        return this->displayFunctionHel(this->getArguments()->getArguments().front());
+    }
+    else
+    {
+        // Nope, display the global help
+        return this->displayGlobalHelp();
+    }
+}
 
 const char* HelpCLIFunction::help()
 {
-    return "Long help";
+    return  "USAGE \n"
+            " $ jungle help [command] \n\n"
+            "PARAMETERS\n"
+            " There are no parameters for this command\n\n"
+            "DESCRIPTION\n"
+            " This command displays either the help dialog for the entire\n"
+            " library/cli interface or the help dialog for a specific\n"
+            " command.\n";
 }
 
 
 const char* HelpCLIFunction::shortHelp()
 {
-    return "Short help";
+    return "Displays either the global help dialog or the help for a specific command";
 }
 
 
@@ -142,74 +221,118 @@ const char* ClassifyCLIFunction::help()
 
 const char* ClassifyCLIFunction::shortHelp()
 {
-    return "Short help";
+    return "Classifies known or unknown data (error statistics, confusion matrix)";
 }
 
+void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
+{
+    // Iterate over all parameters given and ignore unknown parameters
+    std::map<std::string, std::string> parameters = getArguments()->getParameters();
+    for (std::map<std::string, std::string>::iterator it = parameters.begin(); it != parameters.end(); ++it)
+    {
+        switch (ParameterConverter::getChar(it->first))
+        {
+            case 'M':
+                _trainer->setNumDAGs(ParameterConverter::getInt(it->second));
+                break;
+                
+            case 'N':
+                _trainer->setNumTrainingSamples(ParameterConverter::getInt(it->second));
+                break;
+            
+            case 'F':
+                _trainer->setNumFeatureSamples(ParameterConverter::getInt(it->second));
+                break;
+                
+            case 'D':
+                _trainer->setMaxDepth(ParameterConverter::getInt(it->second));
+                break;
+                
+            case 'W':
+                _trainer->setMaxWidth(ParameterConverter::getInt(it->second));
+                break;
+                
+            case 'S':
+                _trainer->setMinSpliCount(ParameterConverter::getInt(it->second));
+                break;
+                
+            case 'C':
+                _trainer->setMinChildSplitCount(ParameterConverter::getInt(it->second));
+                break;
+                
+            case 'T':
+                _trainer->setTrainingMethod(ParameterConverter::getChar(it->second));
+                break;
+        }
+    }
+}
 
 int TrainCLIFunction::execute()
 {
-    int N = 20000;
-    
-    TrainingSet::ptr trainingSet = TrainingSet::Factory::create();
-    
-    std::normal_distribution<> norm1(-1, 0.5);
-    std::normal_distribution<> norm2(1, 0.5);
-    std::normal_distribution<> norm3(25, 0.5);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    
-    std::cout << "Create random training set" << std::endl;
-    
-    for (int i = 0; i < N/4; i++)
+    // There must be a model file and a training set
+    if (getArguments()->getArguments().size() != 2)
     {
-        TrainingExample::ptr current = TrainingExample::Factory::createZeroInitialized(2, 0);
-        (*current->getDataPoint())[0] = norm1(gen);
-        (*current->getDataPoint())[1] = norm3(gen);
-        trainingSet->push_back(current);
+        std::cout << "Please use the command as follows:" << std::endl;
+        std::cout << " $ jungle train [parameters] {trainingset} {model}" << std::endl;
+        std::cout << "See '$ jugle help train' for more information." << std::endl;
+        return 1;
     }
     
-    for (int i = N/4; i < N/2; i++)
-    {
-        TrainingExample::ptr current = TrainingExample::Factory::createZeroInitialized(2, 1);
-        (*current->getDataPoint())[0] = norm2(gen);
-        (*current->getDataPoint())[1] = norm2(gen);
-        trainingSet->push_back(current);
-    }
     
-    for (int i = N/2; i < 3*N/4; i++)
-    {
-        TrainingExample::ptr current = TrainingExample::Factory::createZeroInitialized(2, 2);
-        (*current->getDataPoint())[0] = norm1(gen);
-        (*current->getDataPoint())[1] = norm2(gen);
-        trainingSet->push_back(current);
-    }
-    
-    for (int i = 3*N/4; i < N; i++)
-    {
-        TrainingExample::ptr current = TrainingExample::Factory::createZeroInitialized(2, 3);
-        (*current->getDataPoint())[0] = norm2(gen);
-        (*current->getDataPoint())[1] = norm1(gen);
-        trainingSet->push_back(current);
-    }
-    
+    // Create a trainer and load the given parameters
     JungleTrainer::ptr jungleTrainer = JungleTrainer::Factory::create();
-    jungleTrainer->setNumDAGs(150);
+    // In CLI we always work in verbose mode
+    jungleTrainer->setVerboseMode(true);
+    loadParametersToTrainer(jungleTrainer);
+    
+    // Load the training set
+    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), true);
+    
+    std::cout << std::endl;
+    
+    // Train the jungle
     Jungle::ptr jungle = jungleTrainer->train(trainingSet);
+    
+    std::cout << std::endl;
+    
+    // Display some error statistics
+    TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
+    statisticsTool->setVerboseMode(true);
+    statisticsTool->trainingError(jungle, trainingSet);
+    
+    // Save the jungle in a file
+//    jungle->storeInFile(getArguments()->getArguments().at(1));
+    
     return 0;
 }
 
 
 const char* TrainCLIFunction::help()
 {
-    return "Long help";
+    return  "USAGE \n"
+            " $ jungle train [parameters] {trainingset} {model} \n\n"
+            "PARAMETERS\n"
+            " {trainingset} The filename of a training set to train on\n"
+            " {model}       The output filename of the model file\n"
+            " -M [int]      The number of DAGs that are trained\n"
+            " -N [int]      The number of training examples that are sampled per DAG\n"
+            " -F [int]      The number of features that are sampled per node\n"
+            " -D [int]      Maximum depth of each DAG\n"
+            " -W [int]      Maximum width of each DAG\n"
+            " -S [int]      Minimum number of training examples at a node in order to keep splitting it\n"
+            " -C [int]      Minimum number of training examples at a child node in order to make a split\n"
+            " -T ['e', 'g'] Training method. 'e': Entropy/Information gain, 'g': Gini Index\n\n"
+            "DESCRIPTION\n"
+            " This command trains a new decision jungle on the training set\n"
+            " stored in {trainingset}. The trained model will be saved in\n"
+            " {model}.\n";
 }
 
 
 const char* TrainCLIFunction::shortHelp()
 {
-    return "Short help";
+    return "Trains a new decision jungle on a training set";
 }
-
 
 int VersionCLIFunction::execute()
 {
@@ -223,11 +346,17 @@ int VersionCLIFunction::execute()
 
 const char* VersionCLIFunction::help()
 {
-    return "Long help";
+    return  "USAGE \n"
+            " $ jungle version \n\n"
+            "PARAMETERS\n"
+            " There are no parameters for this command\n\n"
+            "DESCRIPTION\n"
+            " This command displays the version and license information\n"
+            " for this build.\n";
 }
 
 
 const char* VersionCLIFunction::shortHelp()
 {
-    return "Short help";
+    return "Displays the version information and license information for this build";
 }

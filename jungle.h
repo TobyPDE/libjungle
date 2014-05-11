@@ -61,6 +61,12 @@ namespace decision_jungle
              */
             static ptr createZeroInitialized(int _dim)
             {
+                // The size must not be 0, then the vector would have dimension zero
+                if(_dim <= 0)
+                {
+                    throw RuntimeException("Invalid vector dimension.");
+                }
+                
                 ptr featureVector (new self(_dim));
                 // Initialize the vector
                 for (int i = 0; i < _dim; i++)
@@ -69,6 +75,41 @@ namespace decision_jungle
                 }
                 
                 return featureVector;
+            }
+            
+            /**
+             * Creates a new data point from a row from a data set
+             * 
+             * @param _row The vector of strings representing the training example
+             * @return The created training example
+             */
+            static ptr createFromFileRow(const std::vector<std::string> & _row);
+        };
+    };
+    
+    
+    /**
+     * A data set is a collection of data points
+     */
+    class DataSet {
+    public:
+        // We use a vector because we need to sort the set 
+        typedef std::vector<DataPoint::ptr> self;
+        typedef self::iterator iterator;
+        typedef std::shared_ptr<self> ptr;
+        
+        /**
+         * A factory class for training sets
+         */
+        class Factory {
+        public:
+            /**
+             * Creates a new blank data set
+             */
+            static DataSet::ptr create() 
+            {
+                DataSet::ptr result(new self());
+                return result;
             }
         };
     };
@@ -471,5 +512,199 @@ namespace decision_jungle
                 return ptr(new Jungle);
             }
         };
-    };}
+    };
+    
+    /**
+     * This class calculates some statistics. 
+     */
+    class Statistics {
+    private:
+        /**
+         * Verbose mode: Displays progress bars and results
+         */
+        bool verboseMode;
+    public:
+        /**
+         * Default constructor
+         */
+        Statistics() : verboseMode(0) {}
+        
+        typedef Statistics self;
+        typedef std::shared_ptr<self> ptr;
+        
+        /**
+         * Returns the verbose mode state
+         * 
+         * @return true if verbose mode is on
+         */
+        bool getVerboseMode()
+        {
+            return verboseMode;
+        }
+        
+        /**
+         * Sets the verbose mode
+         * 
+         * @param _verboseMode
+         */
+        void setVerboseMode(bool _verboseMode)
+        {
+            verboseMode = _verboseMode;
+        }
+        
+        /**
+         * Calculates a histogram of predicted class labels for a data set
+         * 
+         * @param _jungle the learned jungle
+         * @param _dataSet The dataset to classify
+         * @return A class histogram
+         */
+        ClassHistogram::ptr predictionHistogram(Jungle::ptr _jungle, DataSet::ptr _dataSet);
+        
+        /**
+         * A factory for this class
+         */
+        class Factory {
+        public:
+            /**
+             * Creates a new blank statistics instance
+             * 
+             * @return New instance
+             */
+            static Statistics::ptr create() 
+            {
+                return ptr(new self());
+            }
+        };
+    };
+    
+    /**
+     * This class displays a progress bar in the command line
+     */
+    class ProgressBar {
+    private:
+        /**
+         * The width or the progress bar
+         */
+        int width;
+        /**
+         * The current status of the bar
+         */
+        int state;
+        /**
+         * The total number of elements
+         */
+        int total;
+        
+    public:
+        typedef ProgressBar self;
+        typedef std::shared_ptr<self> ptr;
+        
+        /**
+         * Default constructor
+         */
+        ProgressBar(int _width, int _total) : width(_width), state(0), total(_total) {}
+        /**
+         * Copy constructor
+         */
+        ProgressBar(const ProgressBar & other) : width(other.width), state(other.state), total(other.total) {}
+        /**
+         * Destructor
+         */
+        ~ProgressBar() {}
+        /**
+         * Assignment operator
+         */
+        ProgressBar & operator= (const ProgressBar &other)
+        {
+            // Do not make self copies
+            if (this != &other)
+            {
+                width = other.width;
+                state = other.state;
+                total = other.total;
+            }
+            return *this;
+        }
+        
+        /**
+         * Prints the progress bar with updated state
+         * 
+         * @param _state The new state
+         */
+        void update(int _state)
+        {
+            state = _state;
+            float progress = 0;
+            // Relative progress
+            if (total <= 0)
+            {
+                progress = 1.;
+            }
+            else
+            {
+                progress = _state/static_cast<float>(total);
+            }
+                
+
+            printf("\r[");
+            for (int j = 0; j < width; j++)
+            {
+                if (j <= progress*width)
+                {
+                    printf("*");
+                }
+                else
+                {
+                    printf(" ");
+                }
+            }
+            printf("] %4d/%4d (%2.1f%%)", _state, total, progress*100);
+            
+            // Stop when we reached the end
+            if (state == total)
+            {
+                printf("\n");
+            }
+        }
+        
+        
+        /**
+         * Prints the progress bar with increased state
+         */
+        void update()
+        {
+            update(state + 1);
+        }
+
+        /**
+         * A factory method for the progress bar
+         */
+        class Factory {
+        public:
+            /**
+             * Creates a new progress bar
+             * 
+             * @param _width
+             * @param _total
+             * @return new progress bar
+             */
+            static ProgressBar::ptr create(int _width, int _total)
+            {
+                return ptr(new self(_width, _total));
+            }
+            
+            /**
+             * Creates a new progress bar with default parameters
+             * 
+             * @param _total
+             * @return new progress bar
+             */
+            static ProgressBar::ptr create(int _total)
+            {
+                return ProgressBar::Factory::create(50, _total);
+            }
+        };
+    };
+}
 #endif

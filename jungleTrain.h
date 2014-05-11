@@ -27,6 +27,7 @@ namespace decision_jungle {
     class TrainingSet;
     class JungleTrainer;
     typedef std::shared_ptr<JungleTrainer> JungleTrainerPtr;
+    typedef std::vector< std::vector<float> > Matrix;
     
     /**
      * A training example consists of a data point and a class label
@@ -126,6 +127,14 @@ namespace decision_jungle {
                 DataPoint::ptr dataPoint = DataPoint::Factory::createZeroInitialized(_dim);
                 return Factory::create(dataPoint, _classLabel);
             }
+            
+            /**
+             * Creates a new data point from a row from a data set
+             * 
+             * @param _row The vector of strings representing the training example
+             * @return The created training example
+             */
+            static TrainingExample::ptr createFromFileRow(const std::vector<std::string> & _row);
         };
     };
     
@@ -161,6 +170,15 @@ namespace decision_jungle {
              * @return sampled set
              */
             static TrainingSet::ptr createBySampling(TrainingSet::ptr _trainingSet, int n);
+            
+            /**
+             * Loads a training set from a file
+             * 
+             * @param _fileName The filename
+             * @param _verboseMode
+             * @return The loaded training set
+             */
+            static TrainingSet::ptr createFromFile(const std::string & _fileName, bool _verboseMode);
         };
     };
     
@@ -1417,6 +1435,50 @@ namespace decision_jungle {
             
             return true;
         }
+    };
+    
+    /**
+     * Calculates some statistics over a trained jungle
+     */
+    class TrainingStatistics : public Statistics {
+    public:
+        typedef TrainingStatistics self;
+        typedef std::shared_ptr<self> ptr;
+        
+        /**
+         * Calculates the error on a training set
+         * 
+         * @param _jungle
+         * @param _trainingSet
+         * @return Training error
+         */
+        float trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet);
+        
+        /**
+         * Calculates a confusion matrix on a training set
+         * 
+         * @param _jungle
+         * @param _trainingSet
+         * @return the confusion matrix
+         */
+        // FIXME
+        // Matrix confusionMatrix(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet);
+        
+        /**
+         * A factory for this class
+         */
+        class Factory {
+        public:
+            /**
+             * Creates a new blank instance
+             * 
+             * @return blank instance
+             */
+            static TrainingStatistics::ptr create() 
+            {
+                return ptr(new self());
+            }
+        };
     };
 }
 
