@@ -15,6 +15,9 @@
 #include <string>
 #include "misc.h"
 #include "config.h"
+#include "jungleTrain.h"
+#include <cstdlib>
+
 
 namespace decision_jungle {
     /**
@@ -194,6 +197,19 @@ namespace decision_jungle {
              * @return A new function instance
              */
             static AbstractCLIFunction::ptr createFromArgumentBag(ArgumentBag::ptr _argumentBag) throw(CLIFunctionNotFoundException);
+            /**
+             * Creates a command line function from its registered name
+             * 
+             * @param _name The registered name
+             * @return A new cli function instance
+             */
+            static AbstractCLIFunction::ptr createFromName(const std::string & _name) throw(CLIFunctionNotFoundException);
+            /**
+             * Returns a list of registered function names
+             * 
+             * @return A list of registered names
+             */
+            static std::vector<std::string> getRegisteredNames();
         };
             
         /**
@@ -240,6 +256,21 @@ namespace decision_jungle {
          * Returns the short help text for the overview
          */
         virtual const char* shortHelp();
+        
+        /**
+         * Displays the default help dialog
+         * 
+         * @return status code
+         */
+        int displayGlobalHelp();
+        
+        /**
+         * Displays the help for a certain function
+         * 
+         * @param _name the name of the function
+         * @return status code
+         */
+        int displayFunctionHel(const std::string & _name);
     };
     
     /**
@@ -278,6 +309,14 @@ namespace decision_jungle {
          * This is needed in order to register the function
          */
         static AbstractCLIFunction::RegisterFunction<TrainCLIFunction> reg;
+        
+        /**
+         * Stores the loads the parameters from the cli input and stores them in the
+         * jungle trainer
+         * 
+         * @param _trainer The jungle trainer
+         */
+        void loadParametersToTrainer(JungleTrainer::ptr _trainer);
         
     public:
         /**
@@ -321,6 +360,58 @@ namespace decision_jungle {
          * Returns the short help text for the overview
          */
         virtual const char* shortHelp();
+    };
+    
+    /**
+     * This is a simple class that helps you load parameters. It essentially
+     * converts everything to the types you need.
+     */
+    class ParameterConverter {
+    public:
+        /**
+         * Returns a bool value from a parameter
+         * 
+         * @param _param 
+         * @return bool value
+         */
+        static bool getBool(const std::string & _param)
+        {
+            // An empty string is always false
+            if (_param.length() == 0) return false;
+            
+            // If the string is 0, then it's false. Otherwise it's true
+            if (_param == "0")
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+        
+        /**
+         * Converts a parameter to int
+         * 
+         * @param _param
+         * @return integer value
+         */
+        static int getInt(const std::string & _param)
+        {
+            return atoi(_param.c_str());
+        }
+        
+        /**
+         * Converts a string to a single character by returning the first char
+         * 
+         * @param _param
+         * @return The first character
+         */
+        static char getChar(const std::string & _param)
+        {
+            if (_param.length() == 0) return ' ';
+            return _param[0];
+        }
     };
 }
 

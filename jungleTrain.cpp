@@ -1,10 +1,15 @@
 
+#include <iostream>
+#include <fstream>
+#include <iterator>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <random>
 #include <set>
 #include "jungleTrain.h"
+#include <boost/tokenizer.hpp>
+#include <cstdlib>
 
 using namespace decision_jungle;
 
@@ -326,6 +331,7 @@ TrainingDAGNode::ptr TrainingDAGNode::Factory::create(DAGTrainerPtr trainer)
     // Initialize the training parameters
     node->setTempLeft(0);
     node->setTempRight(0);
+    node->setClassLabel(0);
 
     // Initialize the histograms
     node->setClassHistogram(ClassHistogram::Factory::createEmpty(trainer->getClassCount()));
@@ -500,6 +506,72 @@ TrainingSet::ptr TrainingSet::Factory::createBySampling(TrainingSet::ptr _traini
     return result;
 }
 
+TrainingExample::ptr TrainingExample::Factory::createFromFileRow(const std::vector<std::string> & _row)
+{
+    // There must be at least two entries. Otherwise the vector was empty or the class label
+    // was missing
+    if (_row.size() < 2)
+    {
+        throw RuntimeException("Illegal training set row.");
+    }
+    
+    // Create the corresponding data point by considering only the last columns
+    std::vector<std::string> dataPointRow;
+    dataPointRow.insert(dataPointRow.begin(), _row.begin() + 1, _row.end());
+    
+    return TrainingExample::Factory::create(DataPoint::Factory::createFromFileRow(dataPointRow), atoi(_row[0].c_str()));
+}
+
+TrainingSet::ptr TrainingSet::Factory::createFromFile(const std::string & _fileName, bool _verboseMode)
+{
+    // Create a blank training set and load the file line by line
+    TrainingSet::ptr trainingSet = TrainingSet::Factory::create();
+    
+    std::string data(_fileName);
+
+    std::ifstream in(data.c_str());
+    if (!in.is_open())
+    {
+        throw RuntimeException("Could not open training set file.");
+    }
+
+    // Count the number of lines in order to display the progress bar
+    std::ifstream countFile(_fileName); 
+    int lineCount = std::count(std::istreambuf_iterator<char>(countFile), std::istreambuf_iterator<char>(), '\n');
+    
+    ProgressBar::ptr progressBar = ProgressBar::Factory::create(lineCount);
+    
+    typedef boost::tokenizer< boost::escaped_list_separator<char> > Tokenizer;
+
+    std::vector< std::string > row;
+    std::string line;
+
+    if (_verboseMode)
+    {
+        std::cout << "Loading training set from " << _fileName << std::endl;
+    }
+    while (std::getline(in,line))
+    {
+        if (_verboseMode)
+        {
+            progressBar->update();
+        }
+        
+        Tokenizer tok(line);
+        row.assign(tok.begin(),tok.end());
+
+        // Do not consider blank line
+        if (row.size() == 0) continue;
+        
+        // Load the training example to the training set
+        TrainingExample::ptr example = TrainingExample::Factory::createFromFileRow(row);
+        trainingSet->push_back(example);
+    }
+    std::cout << "Training set loaded. Number of examples: " << trainingSet->size() << std::endl ;
+    
+    return trainingSet;
+}
+
 DAGTrainer::ptr DAGTrainer::Factory::createFromJungleTrainer(JungleTrainer::ptr _jungleTrainer, TrainingSet::ptr _trainingSet)
 {
     DAGTrainer::ptr result = createForTraingSet(_trainingSet);
@@ -548,37 +620,21 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
     
     Jungle::ptr jungle = Jungle::Factory::create();
     
-    printf("Number of training examples: %d\n", static_cast<int>(trainingSet->size()));
-    printf("Number of examples per DAG: %d\n", getNumTrainingSamples());
+    if (getVerboseMode())
+    {
+        printf("Start training\n");
+        printf("Number of training examples: %d\n", static_cast<int>(trainingSet->size()));
+        printf("Number of examples per DAG: %d\n", getNumTrainingSamples());
+        printf("Number of DAGs to train: %d\n", getNumDAGs());
+    }
     
-    // Create a progress bar
-    int progressWidth = 20;
-    float progress = 0.;
-    
+    ProgressBar::ptr progressBar = ProgressBar::Factory::create(getNumDAGs());
     for (int i = 0; i < numDAGs; i++)
     {
-        if (numDAGs > 1)
+        if (getVerboseMode())
         {
-            progress = i/static_cast<float>(numDAGs - 1);
+            progressBar->update();
         }
-        else
-        {
-            progress = 1;
-        }
-        
-        printf("\rTraining DAGs [");
-        for (int j = 0; j < progressWidth; j++)
-        {
-            if (j <= progress*progressWidth)
-            {
-                printf("*");
-            }
-            else
-            {
-                printf(" ");
-            }
-        }
-        printf("] %4d/%4d (%2.1f%%)", i+1, numDAGs, progress*100);
         
         // Create a training set for each DAG by sampling from the given training set
         TrainingSet::ptr sampledSet = TrainingSet::Factory::createBySampling(trainingSet, numTrainingSamples);
@@ -586,19 +642,6 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
         DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(shared_from_this(), sampledSet);
         jungle->getDAGs().insert(trainer->train());
     }
-    printf("\n");
-    
-    
-    // Calculate the training error
-    float error = 0;
-    for (TrainingSet::iterator iter = trainingSet->begin(); iter != trainingSet->end(); ++iter)
-    {
-        if ((*iter)->getClassLabel() != jungle->predict((*iter)->getDataPoint())->getClassLabel())
-        {
-            error++;
-        }
-    }
-    printf("Training error: %2.4f\n", error/static_cast<float>(trainingSet->size()));
     
     return jungle;
 }
@@ -666,3 +709,41 @@ AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createChildNod
     return errorFunction;
 }
 
+float TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet)
+{
+    ProgressBar::ptr progressBar = ProgressBar::Factory::create(_trainingSet->size());
+   
+    if (getVerboseMode())
+    {
+        std::cout << "Calculate training error" << std::endl;
+    }
+    
+    // Calculate the training error
+    float error = 0;
+    for (TrainingSet::iterator iter = _trainingSet->begin(); iter != _trainingSet->end(); ++iter)
+    {
+        // Update the progress bar
+        if (getVerboseMode())
+        {
+            progressBar->update();
+        }
+        
+        if ((*iter)->getClassLabel() != _jungle->predict((*iter)->getDataPoint())->getClassLabel())
+        {
+            error++;
+        }
+    }
+    
+    // Calculate the relative error
+    if (_trainingSet->size()  > 0)
+    {
+        error = error/static_cast<float>(_trainingSet->size());
+    }
+    
+    if (getVerboseMode())
+    {
+        printf("Training error: %2.4f\n", error);
+    }
+    
+    return error;
+}

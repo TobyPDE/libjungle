@@ -58,7 +58,51 @@ PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
         }
     }
     
-    
-    
     return PredictionResult::Factory::create(bestLabel);
+}
+
+ClassHistogram::ptr Statistics::predictionHistogram(Jungle::ptr _jungle, DataSet::ptr _dataSet)
+{
+    ClassHistogram::ptr histogram = ClassHistogram::Factory::createEmpty(0);
+    ProgressBar::ptr progressBar = ProgressBar::Factory::create(_dataSet->size());
+    
+    for (DataSet::iterator it = _dataSet->begin(); it != _dataSet->end(); ++it)
+    {
+        // Display the progress bar
+        if (this->getVerboseMode())
+        {
+            progressBar->update();
+        }
+        
+        // Predict the class label
+        ClassLabel label = _jungle->predict(*it)->getClassLabel();
+        
+        // Did we encounter the class label before?
+        if (histogram->size() < label)
+        {
+            // Yes
+            (*histogram)[label] = (*histogram)[label] + 1;
+        }
+        else
+        {
+            // No
+            (*histogram)[label] = 1;
+        }
+    }
+    
+    return histogram;
+}
+
+DataPoint::ptr DataPoint::Factory::createFromFileRow(const std::vector<std::string> & _row)
+{
+    DataPoint::ptr dataPoint = DataPoint::Factory::createZeroInitialized(_row.size());
+    
+    // Parse the string elements of the vector
+    int counter = 0;
+    for (std::vector<std::string>::const_iterator it = _row.begin(); it != _row.end(); ++it)
+    {
+        (*dataPoint)[counter++] = atof(it->c_str());
+    }
+    
+    return dataPoint;
 }
