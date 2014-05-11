@@ -172,7 +172,6 @@ std::set<TrainingDAGNode::ptr> DAGTrainer::trainLevel(std::set<TrainingDAGNode::
     
     // Create the error function that measures the entropy on the child level of the DAG
     AbstractErrorFunction::ptr childErrorFunction = AbstractErrorFunction::Factory::createChildNodeRowErrorFunction(getTrainingMethod(), parentNodes, childNodeCount);
-    float parentEntropy = childErrorFunction->error();
     // FIXME
     
     // Adjust the thresholds and child assignments until nothing changes anymore
@@ -203,6 +202,7 @@ std::set<TrainingDAGNode::ptr> DAGTrainer::trainLevel(std::set<TrainingDAGNode::
     // Determine whether or not the row training shall be performed
     // Get the entropy of the parent row in order to determine whether or not the split shall be performed
     AbstractErrorFunction::ptr parentErrorFunction = AbstractErrorFunction::Factory::createNodeRowErrorFunction(getTrainingMethod(), parentNodes);
+    float parentEntropy = parentErrorFunction->error();
     float childEntroy = childErrorFunction->error();
     
     // The split is performed, create the childNodes with sufficient data
@@ -286,9 +286,21 @@ std::set<TrainingDAGNode::ptr> DAGTrainer::trainLevel(std::set<TrainingDAGNode::
             }
         }
     }
+    for (int i = 0; i < childNodeCount; i++)
+    {
+        // Does this child node exist?
+        if (!childNodes[i])
+        {
+            // Nope
+            continue;
+        }
+
+        // Select the class label and compute the class histogram for this child node
+        childNodes[i]->updateHistogramAndLabel();
+    }
 
     std::set<TrainingDAGNode::ptr> returnChildNodes;
-
+    
     if (std::abs(parentEntropy - childEntroy) > 1e-10)
     {
         // Decide which nodes to split further
