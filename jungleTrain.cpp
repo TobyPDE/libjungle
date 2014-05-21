@@ -122,7 +122,7 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
     
     // Create the root node
     // FIXME
-    TrainingDAGNode::ptr root = TrainingDAGNode::Factory::create(shared_from_this());
+    TrainingDAGNode::ptr root = TrainingDAGNode::Factory::create(this);
     // The root node gets all the training data
     root->getTrainingSet()->insert(root->getTrainingSet()->end(), trainingSet->begin(), trainingSet->end());
     // Set the class histogram and class label for the node
@@ -137,7 +137,9 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
     {
         // Determine the number of child nodes
         childNodeCount = std::min(static_cast<int>(parentNodes.size()) * 2, getMaxWidth());
-
+        
+        printf("l: %d, #p: %d\n", level, static_cast<int>(parentNodes.size()));
+        
         // Train the level
         parentNodes = trainLevel(parentNodes, childNodeCount);
         
@@ -175,30 +177,51 @@ std::set<TrainingDAGNode::ptr> DAGTrainer::trainLevel(std::set<TrainingDAGNode::
     // FIXME
     
     // Adjust the thresholds and child assignments until nothing changes anymore
-    bool change = false;
-    do
-    {
-        change = false;
-        for (std::set<TrainingDAGNode::ptr>::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
+    if (2*parentNodes.size() != childNodeCount) {
+        bool change = false;
+        do
         {
-            // Find the new optimal threshold
-            if ((*iter)->findThreshold(childErrorFunction))
+            change = false;
+            for (std::set<TrainingDAGNode::ptr>::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
             {
-                change = true;
+                NewChildRowEntropyErrorFunction* __childErrorFunction = new NewChildRowEntropyErrorFunction(&parentNodes, *iter);
+                __childErrorFunction->initHistograms();
+
+                // Find the new optimal threshold
+                if ((*iter)->findThreshold(__childErrorFunction))
+                {
+                    change = true;
+                }
+                delete __childErrorFunction;
             }
-        }
-        
-        for (std::set<TrainingDAGNode::ptr>::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
-        {
-            // Find the new optimal child assignment
-            if ((*iter)->findChildNodeAssignment(childErrorFunction, childNodeCount))
+
+            // Skip this step, if the training is like a decision tree at this point
+            for (std::set<TrainingDAGNode::ptr>::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
             {
-                change = true;
+                // Find the new optimal child assignment
+                if ((*iter)->findChildNodeAssignment(childErrorFunction, childNodeCount))
+                {
+                    change = true;
+                }
             }
+            for (std::set<TrainingDAGNode::ptr>::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
+            {
+                NewChildRowEntropyErrorFunction* __childErrorFunction = new NewChildRowEntropyErrorFunction(&parentNodes, *iter);
+                __childErrorFunction->initHistograms();
+
+                // Find the new optimal threshold
+                if ((*iter)->findThreshold(__childErrorFunction))
+                {
+                    change = true;
+                }
+                delete __childErrorFunction;
+            }
+
+            break;
         }
+        while (change);
     }
-    while (change);
-    
+
     // Determine whether or not the row training shall be performed
     // Get the entropy of the parent row in order to determine whether or not the split shall be performed
     AbstractErrorFunction::ptr parentErrorFunction = AbstractErrorFunction::Factory::createNodeRowErrorFunction(getTrainingMethod(), parentNodes);
@@ -251,7 +274,7 @@ std::set<TrainingDAGNode::ptr> DAGTrainer::trainLevel(std::set<TrainingDAGNode::
     {
         if (dataCounts[i] > 0)
         {
-            childNodes[i] = TrainingDAGNode::Factory::create(shared_from_this());
+            childNodes[i] = TrainingDAGNode::Factory::create(this);
         }
     }
 
@@ -317,7 +340,7 @@ std::set<TrainingDAGNode::ptr> DAGTrainer::trainLevel(std::set<TrainingDAGNode::
             childNodes[i]->updateHistogramAndLabel();
 
             // Only split this node if it's not pure and has enough training data
-            if (!TrainingUtil::histogramIsAlmostDirichlet(childNodes[i]->getClassHistogram(), getMinSplitcount())
+            if (!TrainingUtil::histogramIsDirichlet(childNodes[i]->getClassHistogram())
                     && childNodes[i]->getTrainingSet()->size() > getMinSplitcount())
             {
                 // This is a pure node, don't split it
@@ -333,7 +356,7 @@ std::set<TrainingDAGNode::ptr> DAGTrainer::trainLevel(std::set<TrainingDAGNode::
 
 TrainingDAGNode::ptr TrainingDAGNode::Factory::create(DAGTrainerPtr trainer)
 {
-    TrainingDAGNode::ptr node(new TrainingDAGNode(trainer));
+    TrainingDAGNode::ptr node = new TrainingDAGNode(trainer);
 
     // Initialize the parent parameters
     DAGNode::Factory::init(node);
@@ -503,6 +526,7 @@ bool TrainingDAGNode::findChildNodeAssignment(AbstractErrorFunction::ptr error, 
 
 TrainingSet::ptr TrainingSet::Factory::createBySampling(TrainingSet::ptr _trainingSet, int n)
 {
+    return _trainingSet;
     // Create a distribution over the training set
     std::uniform_int_distribution<int> dist(0,_trainingSet->size() - 1);
     std::random_device rd;
@@ -604,8 +628,8 @@ DAGTrainer::ptr DAGTrainer::Factory::createFromJungleTrainer(JungleTrainer::ptr 
 void AbstractTrainer::Factory::init(AbstractTrainer::ptr _trainer)
 {
     _trainer->maxDepth = 256;
-    _trainer->maxWidth = 256;
-    _trainer->minSplitCount = 30;
+    _trainer->maxWidth = 1024;
+    _trainer->minSplitCount = 3;
     _trainer->minChildSplitCount = 3;
     _trainer->trainingMethod = AbstractErrorFunction::error_entropy;
     _trainer->verboseMode = true;
@@ -651,7 +675,7 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
         // Create a training set for each DAG by sampling from the given training set
         TrainingSet::ptr sampledSet = TrainingSet::Factory::createBySampling(trainingSet, numTrainingSamples);
         
-        DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(shared_from_this(), sampledSet);
+        DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(this, sampledSet);
         jungle->getDAGs().insert(trainer->train());
         
         if (getVerboseMode())
@@ -709,21 +733,42 @@ AbstractErrorFunction::ptr AbstractErrorFunction::Factory::createChildNodeRowErr
     }
 }
 
+AbstractErrorFunction::ptr AbstractErrorFunction::Factory::createNewChildNodeRowErrorFunction(char _criteria, std::set<TrainingDAGNode::ptr>& _nodes, TrainingDAGNode* _parent)
+{
+    // Determine the error measure to use
+    switch (_criteria)
+    {
+        case AbstractErrorFunction::error_entropy:
+            return AbstractEntropyErrorFunction::Factory::createNewChildNodeRowErrorFunction(_nodes, _parent);
+            break;
+
+        default:
+            throw RuntimeException("Unknown error measure.");
+            break;
+    }
+}
+
 AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createNodeErrorFunction(TrainingDAGNode::ptr node)
 {
-    AbstractErrorFunctionPtr errorFunction(new NodeEntropyErrorFunction(node));
+    AbstractErrorFunctionPtr errorFunction = new NodeEntropyErrorFunction(node);
     return errorFunction;
 }
 
 AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createNodeRowErrorFunction(std::set<TrainingDAGNode::ptr>& _nodes)
 {
-    AbstractErrorFunctionPtr errorFunction(new RowEntropyErrorFunction(&_nodes));
+    AbstractErrorFunctionPtr errorFunction = new RowEntropyErrorFunction(&_nodes);
     return errorFunction;
 }
 
 AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createChildNodeRowErrorFunction(std::set<TrainingDAGNode::ptr>& _nodes, int _childNodeCount)
 {
-    AbstractErrorFunctionPtr errorFunction(new ChildRowEntropyErrorFunction(&_nodes, _childNodeCount));
+    AbstractErrorFunctionPtr errorFunction = new ChildRowEntropyErrorFunction(&_nodes, _childNodeCount);
+    return errorFunction;
+}
+
+AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createNewChildNodeRowErrorFunction(std::set<TrainingDAGNode::ptr>& _nodes, TrainingDAGNode::ptr _parent)
+{
+    AbstractErrorFunctionPtr errorFunction = new NewChildRowEntropyErrorFunction(&_nodes, _parent);
     return errorFunction;
 }
 
@@ -758,10 +803,136 @@ float TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _t
         error = error/static_cast<float>(_trainingSet->size());
     }
     
-    if (getVerboseMode())
+    if (getVerboseMode() || 1)
     {
         printf("Training error: %2.4f\n", error);
     }
     
     return error;
+}
+
+
+void NewChildRowEntropyErrorFunction::initHistograms()
+{
+    int classCount = (*row->begin())->getClassHistogram()->size();
+
+    leftHistogram = new int[classCount];
+    rightHistogram = new int[classCount];
+    cleftHistogram = new int[classCount];
+    crightHistogram = new int[classCount];
+
+    // Initialize the histograms
+    for (int i = 0; i < classCount; i++)
+    {
+        leftHistogram[i] = 0;
+        rightHistogram[i] = 0;
+    }
+
+    // We store the data count for each (virtual) child node here
+    leftDataCount = 0;
+    rightDataCount = 0;
+
+    // Compute the histograms for all child nodes
+    for (std::set<TrainingDAGNode::ptr>::iterator it = row->begin(); it != row->end(); ++it)
+    {
+        // Skip the parent node
+        if (*it == parent) continue;
+        
+        int leftNode = (*it)->getTempLeft();
+        ClassHistogram::ptr _leftHistogram = (*it)->getLeftHistogram();
+        int rightNode = (*it)->getTempRight();
+        ClassHistogram::ptr _rightHistogram = (*it)->getRightHistogram();
+
+        if (leftNode == parent->getTempLeft())
+        {
+            // Add the values to the histogram
+            for (int i = 0; i < classCount; i++)
+            {
+                leftHistogram[i] += (*_leftHistogram)[i];
+            }
+            leftDataCount += (*it)->getLeftDataCount();
+        }
+        else if (leftNode == parent->getTempRight())
+        {
+            // Add the values to the histogram
+            for (int i = 0; i < classCount; i++)
+            {
+                rightHistogram[i] += (*_leftHistogram)[i];
+            }
+            rightDataCount += (*it)->getLeftDataCount();
+        }
+
+        if (rightNode == parent->getTempLeft())
+        {
+            // Add the values to the histogram
+            for (int i = 0; i < classCount; i++)
+            {
+                leftHistogram[i] += (*_rightHistogram)[i];
+            }
+            leftDataCount += (*it)->getRightDataCount();
+        }
+        else if (leftNode == parent->getTempRight())
+        {
+            // Add the values to the histogram
+            for (int i = 0; i < classCount; i++)
+            {
+                rightHistogram[i] += (*_rightHistogram)[i];
+            }
+            rightDataCount += (*it)->getRightDataCount();
+        }
+    }
+}
+
+float NewChildRowEntropyErrorFunction::error() const
+{
+    float result = 0.;
+    int classCount = (*row->begin())->getClassHistogram()->size();
+
+
+    ClassHistogram::ptr _leftHistogram = parent->getLeftHistogram();
+    ClassHistogram::ptr _rightHistogram = parent->getRightHistogram();
+/*
+    printf("Parent (left):    ");
+    for (int i = 0; i < classCount; i++)
+    {
+        printf("%6d: %6d ", i, _leftHistogram->at(i));
+    }
+    printf("\n");
+
+    printf("Parent (right):   ");
+    for (int i = 0; i < classCount; i++)
+    {
+        printf("%6d: %6d ", i, _rightHistogram->at(i));
+    }
+    printf("\n");
+    printf("Virtual  (left):  ");
+    for (int i = 0; i < classCount; i++)
+    {
+        printf("%6d: %6d ", i, leftHistogram[i]);
+    }
+    printf("\n");
+
+    printf("Virtual  (right): ");
+    for (int i = 0; i < classCount; i++)
+    {
+        printf("%6d: %6d ", i, rightHistogram[i]);
+    }
+    printf("\n\n");
+*/
+    // Initialize the histograms
+    for (int i = 0; i < classCount; i++)
+    {
+        cleftHistogram[i] = leftHistogram[i] + _leftHistogram->at(i);
+        crightHistogram[i] = rightHistogram[i] + _rightHistogram->at(i);
+    }
+
+    // We store the data count for each (virtual) child node here
+    int cleftDataCount = leftDataCount + parent->getLeftDataCount();
+    int crightDataCount = rightDataCount + parent->getRightDataCount();
+
+    float dataCount = cleftDataCount + crightDataCount;
+    result = cleftDataCount/dataCount * entropy(cleftHistogram, classCount);
+    result += crightDataCount/dataCount * entropy(crightHistogram, classCount);
+
+    return result;
 }

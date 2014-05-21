@@ -14,6 +14,7 @@
 #include <iomanip>
 #include <random>
 #include <exception>
+#include <boost/timer.hpp>
 
 
 using namespace decision_jungle;
@@ -30,7 +31,7 @@ AbstractCLIFunction::RegisterFunction<VersionCLIFunction> VersionCLIFunction::re
 int main(int argc, const char** argv)
 {
     try {
-        // Parse the arguments into an argument bag
+       // Parse the arguments into an argument bag
         ArgumentBag::ptr arguments = ArgumentBag::Factory::createFromCLIArguments(1, argc, argv);
         // Try to load the requested function
         AbstractCLIFunction::ptr function = AbstractCLIFunction::Factory::createFromArgumentBag(arguments);
@@ -286,10 +287,12 @@ int TrainCLIFunction::execute()
     std::cout << std::endl;
     
     // Train the jungle
+  boost::timer t; // start timing
     Jungle::ptr jungle = jungleTrainer->train(trainingSet);
+        std::cout << static_cast<double>(t.elapsed()) << "\n";
     
     std::cout << std::endl;
-    
+  
     // Display some error statistics
     TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
     statisticsTool->setVerboseMode(true);

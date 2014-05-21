@@ -46,7 +46,7 @@ namespace decision_jungle
     class DataPoint {
     public:
         typedef std::vector<double> self;
-        typedef std::shared_ptr<self> ptr;
+        typedef self* ptr;
         
         /**
          * A factory for data points
@@ -67,7 +67,8 @@ namespace decision_jungle
                     throw RuntimeException("Invalid vector dimension.");
                 }
                 
-                ptr featureVector (new self(_dim));
+                ptr featureVector = new self(_dim);
+                
                 // Initialize the vector
                 for (int i = 0; i < _dim; i++)
                 {
@@ -96,7 +97,7 @@ namespace decision_jungle
         // We use a vector because we need to sort the set 
         typedef std::vector<DataPoint::ptr> self;
         typedef self::iterator iterator;
-        typedef std::shared_ptr<self> ptr;
+        typedef self* ptr;
         
         /**
          * A factory class for training sets
@@ -108,7 +109,7 @@ namespace decision_jungle
              */
             static DataSet::ptr create() 
             {
-                DataSet::ptr result(new self());
+                DataSet::ptr result = new self();
                 return result;
             }
         };
@@ -122,7 +123,7 @@ namespace decision_jungle
         typedef int value;
         typedef std::vector<value> self;
         typedef self::iterator iterator;
-        typedef std::shared_ptr<self> ptr;
+        typedef self* ptr;
         
         /**
          * A Factory for class histograms
@@ -137,7 +138,7 @@ namespace decision_jungle
              */
             static ClassHistogram::ptr createEmpty(int bins) 
             {
-                ClassHistogram::ptr histogram(new ClassHistogram::self(bins));
+                ClassHistogram::ptr histogram = new ClassHistogram::self(bins);
 
                 // Initialize all bins with zero
                 for (int i = 0; i < bins; i++)
@@ -179,7 +180,7 @@ namespace decision_jungle
         
     public:
         typedef PredictionResult self;
-        typedef std::shared_ptr<self> ptr;
+        typedef self* ptr;
         
         /**
          * Default constructor
@@ -244,7 +245,7 @@ namespace decision_jungle
              */
             static PredictionResult::ptr create(const ClassLabel _classLabel, const float _confidence)
             {
-                PredictionResult::ptr result(new PredictionResult::self(_classLabel, _confidence));
+                PredictionResult::ptr result = new PredictionResult::self(_classLabel, _confidence);
                 return result;
             }
 
@@ -256,7 +257,7 @@ namespace decision_jungle
              */
             static PredictionResult::ptr create(const ClassLabel _classLabel)
             {
-                PredictionResult::ptr result(new PredictionResult::self(_classLabel, 0));
+                PredictionResult::ptr result = new PredictionResult::self(_classLabel, 0);
                 return result;
             }
         };
@@ -267,7 +268,7 @@ namespace decision_jungle
      */
     class DAGNode {
     public:
-        DEFINE_CLASS_PTR(DAGNode)
+        typedef DAGNode self;	typedef DAGNode* ptr;
     private:
         /**
          * The feature ID (feature vector index to test) that is tested at this node
@@ -437,7 +438,7 @@ namespace decision_jungle
          */
         void traverse()
         {
-            printf("%p: [f: %d, t: %2.5f, l: %p, r: %p] -> %d\n", this, getFeatureID(), getThreshold(), getLeft().get(), getRight().get(), getClassLabel());
+            printf("%p: [f: %d, t: %2.5f, l: %p, r: %p] -> %d\n", this, getFeatureID(), getThreshold(), getLeft(), getRight(), getClassLabel());
             if (left)
             {
                 left->traverse();
@@ -461,6 +462,8 @@ namespace decision_jungle
                 node->setFeatureID(0);
                 node->setThreshold(0);
                 node->setClassLabel(0);
+                node->setLeft(0);
+                node->setRight(0);
                 node->setClassHistogram(ClassHistogram::Factory::createEmpty(0));
             }
             
@@ -472,7 +475,7 @@ namespace decision_jungle
              */
             static DAGNode::ptr create()
             {
-                DAGNode::ptr node(new DAGNode());
+                DAGNode::ptr node = new DAGNode();
 
                 // Initialize the node
                 Factory::init(node);
@@ -494,7 +497,7 @@ namespace decision_jungle
         
     public:
         typedef Jungle self;
-        typedef std::shared_ptr<self> ptr;
+        typedef self* ptr;
         
         /**
          * Returns the trained DAGs
@@ -525,7 +528,7 @@ namespace decision_jungle
              */
             static Jungle::ptr create()
             {
-                return ptr(new Jungle);
+                return new Jungle;
             }
         };
     };
@@ -546,7 +549,7 @@ namespace decision_jungle
         Statistics() : verboseMode(0) {}
         
         typedef Statistics self;
-        typedef std::shared_ptr<self> ptr;
+        typedef self* ptr;
         
         /**
          * Returns the verbose mode state
@@ -589,7 +592,7 @@ namespace decision_jungle
              */
             static Statistics::ptr create() 
             {
-                return ptr(new self());
+                return new self();
             }
         };
     };
@@ -611,7 +614,11 @@ namespace decision_jungle
          * The total number of elements
          */
         int total;
-        
+        /**
+         * Last upper bound. Don't repaint, if the bar didn't change
+         */
+        int _lastUpperBound;
+
     public:
         typedef ProgressBar self;
         typedef std::shared_ptr<self> ptr;
@@ -619,11 +626,11 @@ namespace decision_jungle
         /**
          * Default constructor
          */
-        ProgressBar(int _width, int _total) : width(_width), state(0), total(_total) {}
+        ProgressBar(int _width, int _total) : width(_width), state(0), total(_total), _lastUpperBound(0) {}
         /**
          * Copy constructor
          */
-        ProgressBar(const ProgressBar & other) : width(other.width), state(other.state), total(other.total) {}
+        ProgressBar(const ProgressBar & other) : width(other.width), state(other.state), total(other.total), _lastUpperBound(0) {}
         /**
          * Destructor
          */
@@ -639,6 +646,7 @@ namespace decision_jungle
                 width = other.width;
                 state = other.state;
                 total = other.total;
+                _lastUpperBound = 0;
             }
             return *this;
         }
@@ -662,6 +670,12 @@ namespace decision_jungle
                 progress = _state/static_cast<float>(total);
             }
                 
+            if (static_cast<int>(progress*width) == _lastUpperBound && _lastUpperBound > 0)
+            {
+                return;
+            }
+
+            _lastUpperBound = static_cast<int>(progress*width);
 
             printf("\r[");
             for (int j = 0; j < width; j++)
@@ -682,6 +696,8 @@ namespace decision_jungle
             {
                 printf("\n");
             }
+
+            std::cout.flush();
         }
         
         
