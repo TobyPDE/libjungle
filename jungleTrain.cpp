@@ -193,31 +193,17 @@ std::set<TrainingDAGNode::ptr> DAGTrainer::trainLevel(std::set<TrainingDAGNode::
                     change = true;
                 }
                 delete __childErrorFunction;
-            }
-
-            // Skip this step, if the training is like a decision tree at this point
-            for (std::set<TrainingDAGNode::ptr>::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
-            {
                 // Find the new optimal child assignment
-                if ((*iter)->findChildNodeAssignment(childErrorFunction, childNodeCount))
+                if ((*iter)->findRightChildNodeAssignment(childErrorFunction, childNodeCount))
+                {
+                    change = true;
+                }
+                // Find the new optimal child assignment
+                if ((*iter)->findLeftChildNodeAssignment(childErrorFunction, childNodeCount))
                 {
                     change = true;
                 }
             }
-            for (std::set<TrainingDAGNode::ptr>::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
-            {
-                NewChildRowEntropyErrorFunction* __childErrorFunction = new NewChildRowEntropyErrorFunction(&parentNodes, *iter);
-                __childErrorFunction->initHistograms();
-
-                // Find the new optimal threshold
-                if ((*iter)->findThreshold(__childErrorFunction))
-                {
-                    change = true;
-                }
-                delete __childErrorFunction;
-            }
-
-            break;
         }
         while (change);
     }
@@ -519,6 +505,85 @@ bool TrainingDAGNode::findChildNodeAssignment(AbstractErrorFunction::ptr error, 
     
     // Restore the arg min setting
     setTempLeft(selectedLeft);
+    setTempRight(selectedRight);
+    
+    return changed;
+}
+
+
+bool TrainingDAGNode::findLeftChildNodeAssignment(AbstractErrorFunction::ptr error, int childNodeCount)
+{
+    // Save the currently best settings
+    int selectedLeft = tempLeft;
+    int selectedRight = tempRight;
+    
+    float bestEntropy = error->error();
+    float currentEntropy = 0;
+    bool changed = false;
+    
+    // Test all possible assignments
+    for (int cLeft = 0; cLeft < childNodeCount; cLeft++)
+    {
+        // Do not assign both pointers to the same node
+        // This doesn't make any sense
+        if (cLeft == selectedRight) continue;
+
+        // Test this assignment
+        setTempLeft(cLeft);
+
+        // Get the error
+        currentEntropy = error->error();
+
+        // Is this better?
+        if (currentEntropy > bestEntropy)
+        {
+            // it is
+            selectedLeft = cLeft;
+            bestEntropy = currentEntropy;
+            changed = true;
+        }
+    }
+    
+    // Restore the arg min setting
+    setTempLeft(selectedLeft);
+    
+    return changed;
+}
+
+bool TrainingDAGNode::findRightChildNodeAssignment(AbstractErrorFunction::ptr error, int childNodeCount)
+{
+    // Save the currently best settings
+    int selectedLeft = tempLeft;
+    int selectedRight = tempRight;
+    
+    float bestEntropy = error->error();
+    float currentEntropy = 0;
+    bool changed = false;
+    
+    // Test all possible assignments
+    for (int cRight = 0; cRight < childNodeCount; cRight++)
+    {
+        // Do not assign both pointers to the same node
+        // This doesn't make any sense
+        if (selectedLeft == cRight) continue;
+
+        // Test this assignment
+        setTempRight(cRight);
+
+        // Get the error
+        currentEntropy = error->error();
+
+        // Is this better?
+        if (currentEntropy > bestEntropy)
+        {
+            // it is
+            selectedRight = cRight;
+            bestEntropy = currentEntropy;
+            changed = true;
+        }
+    }
+    
+    // Restore the arg min setting
     setTempRight(selectedRight);
     
     return changed;
