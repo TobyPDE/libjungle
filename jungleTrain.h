@@ -393,6 +393,8 @@ namespace decision_jungle {
          * @return true if the assignment was changed.
          */
         bool findChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
+        bool findLeftChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
+        bool findRightChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
         
         /**
          * Factory class for these training nodes
@@ -1266,7 +1268,6 @@ namespace decision_jungle {
         }
     };
 
-        
     /**
      * Calculates the entropy error based on a child row
      */
