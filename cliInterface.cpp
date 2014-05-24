@@ -275,6 +275,11 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
             case 'c':
                 _trainer->setUseStochasticChildNodeAssignment(ParameterConverter::getBool(it->second));
                 break;
+                
+            case 'd':
+                dumpSettings = ParameterConverter::getBool(it->second);
+                break;
+                
         }
     }
 }
@@ -282,6 +287,8 @@ TrainingSet::ptr testSet;
 
 int TrainCLIFunction::execute()
 {
+    dumpSettings = false;
+    
     // There must be a model file and a training set
     if (getArguments()->getArguments().size() != 2)
     {
@@ -297,6 +304,23 @@ int TrainCLIFunction::execute()
     // In CLI we always work in verbose mode
     jungleTrainer->setVerboseMode(true);
     loadParametersToTrainer(jungleTrainer);
+    
+    if (dumpSettings)
+    {
+        std::cout << "Settings dump:" << std::endl;
+        std::cout << "numFeatureSamples " << jungleTrainer->getNumFeatureSamples() << std::endl;
+        std::cout << "maxDepth " << jungleTrainer->getMaxDepth() << std::endl;
+        std::cout << "maxWidth " << jungleTrainer->getMaxWidth() << std::endl;
+        std::cout << "minSplitCount " << jungleTrainer->getMinSplitCount() << std::endl;
+        std::cout << "minChildSplitCount " << jungleTrainer->getMinChildSplitCount() << std::endl;
+        std::cout << "trainingMethod " << jungleTrainer->getTrainingMethod() << std::endl;
+        std::cout << "useBagging " << jungleTrainer->getUseBagging() << std::endl;
+        std::cout << "maxLevelIterations " << jungleTrainer->getMaxLevelIterations() << std::endl;
+        std::cout << "useStochasticThreshold " << jungleTrainer->getUseStochasticThreshold() << std::endl;
+        std::cout << "useStochasticChildNodeAssignment " << jungleTrainer->getUseStochasticChildNodeAssignment() << std::endl;
+        std::cout << "numDAGs " << jungleTrainer->getNumDAGs() << std::endl;
+        std::cout << "numTrainingSamples " << jungleTrainer->getNumTrainingSamples() << std::endl << std::endl;
+    }
     
     // Load the training set
     std::cout << "Load training set" << std::endl;

@@ -318,6 +318,11 @@ namespace decision_jungle {
          */
         void loadParametersToTrainer(JungleTrainer::ptr _trainer);
         
+        /**
+         * True if the trainer settings shall be dumped
+         */
+        bool dumpSettings;
+        
     public:
         /**
          * Executes the command/function
