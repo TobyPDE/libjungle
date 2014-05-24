@@ -96,6 +96,9 @@ void DAGTrainer::getSampledFeatures(std::vector<int> & sampledFeature)
         sampledFeature.push_back(dist(gen));
     }
 }
+extern TrainingSet::ptr testSet;
+int leafNodeCount;
+int totalNodeCount;
 
 TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeException)
 {
@@ -119,37 +122,36 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
     int childNodeCount = 0;
     
     // Count the total number of nodes and leaf nodes
-    int totalNodeCount = 1;
-    int leafNodeCount = 0;
+    totalNodeCount = 1;
+    leafNodeCount = 0;
+    
+    TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
+    Jungle::ptr jungle = Jungle::Factory::create();
+    jungle->getDAGs().insert(root);
     
     for (int level = 1; level <= getMaxDepth(); level++)
     {
         // Determine the number of child nodes
         childNodeCount = std::min(static_cast<int>(parentNodes.size()) * 2, getMaxWidth());
-        totalNodeCount += childNodeCount;
         
         if (getVerboseMode())
         {
-            printf("level: %5d, nodes: %6d\n", level, static_cast<int>(parentNodes.size()));
+            //printf("level: %5d, nodes: %6d\n", level, static_cast<int>(parentNodes.size()));
         }
         
         // Train the level
         parentNodes = trainLevel(parentNodes, childNodeCount);
         
-        leafNodeCount += childNodeCount - parentNodes.size();
-        
-        // FIXME: Level statistics
-        if (0)
-        {
-            
-        }
-        
+        printf("%d, %f, %f, %d, %d \n", level, statisticsTool->trainingError(jungle, trainingSet), statisticsTool->trainingError(jungle, testSet), totalNodeCount, leafNodeCount);
+    
         // Stop when there is nothing more to do
         if (parentNodes.size() == 0)
         {
             break;
         }
     }
+    jungle->getDAGs().erase(jungle->getDAGs().begin());
+    
     std::cout << "nodes: " << totalNodeCount << ", leaves: " << leafNodeCount << std::endl;
     
     return root;
@@ -165,6 +167,7 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     for (NodeRow::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
     {
         // Move the virtual child pointers to the side in order to determine a good initialization for the threshold
+        std::cout.flush();
         (*iter)->setTempLeft(-1);
         (*iter)->setTempRight(-1);
         
@@ -180,6 +183,7 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
         (*iter)->setTempRight(vChildren++ % childNodeCount);
     }
     
+    AbstractErrorFunction::ptr childErrorFunction = AbstractErrorFunction::Factory::createChildRowErrorFunction(getTrainingMethod(), parentNodes, childNodeCount);
     // Adjust the thresholds and child assignments until nothing changes anymore
     if (2*parentNodes.size() != childNodeCount) {
         bool change = false;
@@ -206,12 +210,12 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
                 AbstractErrorFunction::ptr assignmentError = AbstractErrorFunction::Factory::createAssignmentEntropyErrorFunction(getTrainingMethod(), parentNodes, *iter, childNodeCount);
                 
                 // Find the new optimal child assignment
-                if ((*iter)->findRightChildNodeAssignment(assignmentError, childNodeCount))
+                if ((*iter)->findRightChildNodeAssignment(childErrorFunction, childNodeCount))
                 {
                     change = true;
                 }
                 // Find the new optimal child assignment
-                if ((*iter)->findLeftChildNodeAssignment(assignmentError, childNodeCount))
+                if ((*iter)->findLeftChildNodeAssignment(childErrorFunction, childNodeCount))
                 {
                     change = true;
                 }
@@ -225,7 +229,6 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
 
     // Determine whether or not the row training shall be performed
     // Get the entropy of the parent row in order to determine whether or not the split shall be performed
-    AbstractErrorFunction::ptr childErrorFunction = AbstractErrorFunction::Factory::createChildRowErrorFunction(getTrainingMethod(), parentNodes, childNodeCount);
     AbstractErrorFunction::ptr parentErrorFunction = AbstractErrorFunction::Factory::createRowErrorFunction(getTrainingMethod(), parentNodes);
     float parentEntropy = parentErrorFunction->error();
     float childEntroy = childErrorFunction->error();
@@ -279,6 +282,7 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
         if (dataCounts[i] > 0)
         {
             childNodes[i] = TrainingDAGNode::Factory::create(this);
+            totalNodeCount++;
         }
     }
 
@@ -344,13 +348,17 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
             childNodes[i]->updateHistogramAndLabel();
 
             // Only split this node if it's not pure and has enough training data
-            if (!TrainingUtil::histogramIsDirichlet(childNodes[i]->getClassHistogram())
-                    && childNodes[i]->getTrainingSet()->size() >= getMinSplitCount())
+//            if (!TrainingUtil::histogramIsDirichlet(childNodes[i]->getClassHistogram())
+//                    && childNodes[i]->getTrainingSet()->size() >= getMinSplitCount())
             {
                 // This is a pure node, don't split it
                 returnChildNodes.push_back(childNodes[i]);
                 continue;
             }
+/*            else
+            {
+                leafNodeCount++;
+            }*/
         }
     }
     delete[] dataCounts;
@@ -405,6 +413,9 @@ void TrainingDAGNode::updateHistogramAndLabel()
 
 bool TrainingDAGNode::findThreshold(AbstractErrorFunction::ptr error)
 {
+    // If there are no training examples, there is nothing to train
+    if (trainingSet->size() == 0) return false;
+    
     // We need to save the current settings in order to restore them after optimization because we modify the object
     // in order to evaluate the error function
     ClassHistogram::ptr bestLeftHistogram = ClassHistogram::Factory::clone(leftHistogram);
@@ -485,6 +496,9 @@ bool TrainingDAGNode::findThreshold(AbstractErrorFunction::ptr error)
 
 bool TrainingDAGNode::findLeftChildNodeAssignment(AbstractErrorFunction::ptr error, int childNodeCount)
 {
+    // If there are no training examples, there is nothing to train
+    if (trainingSet->size() == 0) return false;
+    
     // Save the currently best settings
     int selectedLeft = tempLeft;
     
@@ -519,6 +533,9 @@ bool TrainingDAGNode::findLeftChildNodeAssignment(AbstractErrorFunction::ptr err
 
 bool TrainingDAGNode::findRightChildNodeAssignment(AbstractErrorFunction::ptr error, int childNodeCount)
 {
+    // If there are no training examples, there is nothing to train
+    if (trainingSet->size() == 0) return false;
+    
     // Save the currently best settings
     int selectedRight = tempRight;
     
@@ -689,8 +706,7 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
     {
         printf("Start training\n");
         printf("Number of training examples: %d\n", static_cast<int>(trainingSet->size()));
-        // FIXME: Bagging
-        if (0)
+        if (getUseBagging())
         {
             printf("Number of examples per DAG: %d\n", getNumTrainingSamples());
         }
@@ -707,9 +723,9 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
         // Create a training set for each DAG by sampling from the given training set
         // FIXME: Parameter bagging on/off
         TrainingSet::ptr sampledSet = trainingSet;
-        if (0)
+        if (getUseBagging())
         {
-            TrainingSet::ptr sampledSet = TrainingSet::Factory::createBySampling(trainingSet, numTrainingSamples);
+            sampledSet = TrainingSet::Factory::createBySampling(trainingSet, numTrainingSamples);
         }
         
         DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(this, sampledSet);

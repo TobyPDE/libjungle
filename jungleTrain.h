@@ -249,6 +249,27 @@ namespace decision_jungle {
         typedef TrainingDAGNode self;
         typedef self* ptr;
         
+        void dump()
+        {
+            printf("this: %p ", this);
+            printf("training set: %d ", static_cast<int>(trainingSet->size()));
+            printf("left hist: ");
+            int c = 0;
+            for (ClassHistogram::iterator it = leftHistogram->begin(); it != leftHistogram->end(); ++it)
+            {
+                printf("%d : %d ", c++, *it);
+            }
+            printf(" ");
+            printf("right hist: ");
+            c = 0;
+            for (ClassHistogram::iterator it = rightHistogram->begin(); it != rightHistogram->end(); ++it)
+            {
+                printf("%d : %d ", c++, *it);
+            }
+            printf("\n");
+            std::cout.flush();
+        }
+        
         /**
          * Resets the left and right histograms
          */

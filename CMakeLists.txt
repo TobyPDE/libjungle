@@ -15,4 +15,5 @@ target_link_libraries(jungle
 ADD_DEFINITIONS(
     -std=c++0x
     -O3
+    -g
 )
