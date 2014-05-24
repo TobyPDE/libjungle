@@ -5,6 +5,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 #include "jungle.h"
 
 /**
@@ -28,6 +29,8 @@ namespace decision_jungle {
     class JungleTrainer;
     typedef JungleTrainer* JungleTrainerPtr;
     typedef std::vector< std::vector<float> > Matrix;
+    typedef std::vector< TrainingDAGNode* > NodeRow;
+    
     
     /**
      * A training example consists of a data point and a class label
@@ -146,7 +149,19 @@ namespace decision_jungle {
         // We use a vector because we need to sort the training set during training
         typedef std::vector<TrainingExample::ptr> self;
         typedef self::iterator iterator;
-        typedef self* ptr;
+        typedef std::shared_ptr<self> ptr;
+        
+        /**
+         * Deletes all data points in a training set
+         */
+        static void freeTrainingExamples(TrainingSet::ptr _trainingSet)
+        {
+            for (TrainingSet::iterator it = _trainingSet->begin(); it != _trainingSet->end(); ++it)
+            {
+                delete *it;
+            }
+            _trainingSet->erase(_trainingSet->begin(), _trainingSet->end());
+        }
         
         /**
          * A factory class for training sets
@@ -158,7 +173,7 @@ namespace decision_jungle {
              */
             static TrainingSet::ptr create() 
             {
-                TrainingSet::ptr result = new self();
+                TrainingSet::ptr result(new self());
                 return result;
             }
             
@@ -234,7 +249,6 @@ namespace decision_jungle {
         typedef TrainingDAGNode self;
         typedef self* ptr;
         
-        
         /**
          * Resets the left and right histograms
          */
@@ -281,7 +295,11 @@ namespace decision_jungle {
         /**
          * Destructor
          */
-        virtual ~TrainingDAGNode() {}
+        virtual ~TrainingDAGNode()
+        {
+            delete rightHistogram;
+            delete leftHistogram;
+        }
         
         /**
          * Selects the best class label and computes the class histogram based on the current training set
@@ -392,7 +410,6 @@ namespace decision_jungle {
          * @param error An error function to measure the entropy of the current setting
          * @return true if the assignment was changed.
          */
-        bool findChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
         bool findLeftChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
         bool findRightChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
         
@@ -413,11 +430,6 @@ namespace decision_jungle {
      */
     class AbstractTrainer {
     private:
-        /**
-         * A weighting for the feature dimensions (for sampling)
-         */
-        std::vector<float> featureWeights;
-        
         /**
          * Number of features to sample
          */
@@ -448,10 +460,32 @@ namespace decision_jungle {
          * The used training criterion (entropy or gini)
          */
         char trainingMethod;
+        
         /**
          * Verbose more
          */
         bool verboseMode;
+        
+        /**
+         * Whether of not bagging shall be used during training
+         */
+        bool useBagging;
+        
+        /**
+         * The maximum number of iterations at each level
+         */
+        int maxLevelIterations;
+        
+        /**
+         * True, if stochastic threshold estimation shall be used
+         */
+        bool useStochasticThreshold;
+        
+        /**
+         * True, if the child node assignment shall be perform stochastically
+         */
+        bool useStochasticChildNodeAssignment;
+        
     protected:
         /**
          * Validates all parameters and throws an exception is some parameters are invalid
@@ -463,6 +497,86 @@ namespace decision_jungle {
     public:
         typedef AbstractTrainer self;
         typedef self* ptr;
+        
+        /**
+         * Sets useBagging
+         * 
+         * @param _useBagging
+         */
+        void setUseBagging(bool _useBagging)
+        {
+            useBagging = _useBagging;
+        }
+        
+        /**
+         * Returns useBagging
+         * 
+         * @return useBagging
+         */
+        bool getUseBagging()
+        {
+            return useBagging;
+        }
+        
+        /**
+         * Sets maxLevelIterations
+         * 
+         * @param _maxLevelIterations
+         */
+        void setMaxLevelIterations(int _maxLevelIterations)
+        {
+            maxLevelIterations = _maxLevelIterations;
+        }
+        
+        /**
+         * Returns maxLevelIterations
+         * 
+         * @return maxLevelIterations
+         */
+        int getMaxLevelIterations()
+        {
+            return maxLevelIterations;
+        }
+        
+        /**
+         * Sets useStochasticThreshold
+         * 
+         * @param _useStochasticThreshold
+         */
+        void setUseStochasticThreshold(bool _useStochasticThreshold)
+        {
+            useStochasticThreshold = _useStochasticThreshold;
+        }
+        
+        /**
+         * Returns useStochasticThreshold
+         * 
+         * @return useStochasticThreshold
+         */
+        bool getUseStochasticThreshold()
+        {
+            return useStochasticThreshold;
+        }
+        
+        /**
+         * Sets useStochasticChildNodeAssignment
+         * 
+         * @param _useStochasticChildNodeAssignment
+         */
+        void setUseStochasticChildNodeAssignment(bool _useStochasticChildNodeAssignment)
+        {
+            useStochasticChildNodeAssignment = _useStochasticChildNodeAssignment;
+        }
+        
+        /**
+         * Returns useStochasticChildNodeAssignment
+         * 
+         * @return useStochasticChildNodeAssignment
+         */
+        bool getUseStochasticChildNodeAssignment()
+        {
+            return useStochasticChildNodeAssignment;
+        }
         
         /**
          * Sets the status of verbose mode
@@ -503,27 +617,7 @@ namespace decision_jungle {
         {
             return trainingMethod;
         }
-        
-        /**
-         * Sets the feature weights
-         * 
-         * @param _featureWeights the new feature weights
-         */
-        void setFeatureWeights(std::vector<float> _featureWeights)
-        {
-            featureWeights = _featureWeights;
-        }
-        
-        /**
-         * Returns the feature weights
-         * 
-         * @return Feature weighs
-         */
-        std::vector<float> & getFeatureWeights()
-        {
-            return featureWeights;
-        }
-        
+
         /**
          * Sets the max depth
          * 
@@ -579,7 +673,7 @@ namespace decision_jungle {
          * 
          * @return min split count
          */
-        int getMinSplitcount()
+        int getMinSplitCount()
         {
             return minSplitCount;
         }
@@ -688,7 +782,7 @@ namespace decision_jungle {
          * @param parentNodes The set of parent nodes
          * @param childNodeCount The number of child nodes
          */
-        std::set<TrainingDAGNode::ptr> trainLevel(std::set<TrainingDAGNode::ptr> &parentNodes, int childNodeCount);
+        NodeRow trainLevel(NodeRow &parentNodes, int childNodeCount);
     public:
         typedef DAGTrainer self;
         typedef self* ptr;
@@ -851,7 +945,7 @@ namespace decision_jungle {
              */
             static JungleTrainer::ptr create()
             {
-                JungleTrainer::ptr trainer = new JungleTrainer();
+                JungleTrainer::ptr trainer(new JungleTrainer());
                 
                 // Initialize the trainer with the default parameters
                 init(trainer);
@@ -868,6 +962,7 @@ namespace decision_jungle {
     public:
         typedef AbstractErrorFunction self;
         typedef self* ptr;
+        
         /**
          * Indicator for the entropy error
          */
@@ -889,21 +984,13 @@ namespace decision_jungle {
         class Factory {
         public:
             /**
-             * Creates a new node entropy error for a single node
-             * 
-             * @param _criteria The training criteria (entropy, gini ..)
-             * @param _node The corresponding node
-             */
-            static ptr createNodeErrorFunction(char _criteria, TrainingDAGNode::ptr _node);
-            
-            /**
              * Creates a new node row entropy error. 
              * This function measures the entropy of a row of nodes. (Not considering links to child nodes). 
              * 
              * @param _criteria The training criteria (entropy, gini ..)
              * @param _nodes The corresponding nodes
              */
-            static ptr createNodeRowErrorFunction(char _criteria, std::set<TrainingDAGNode::ptr> & _nodes);
+            static ptr createRowErrorFunction(char _criteria, NodeRow & _nodes);
             
             /**
              * Creates a new error functions that measures the error at the child row based on the virtual child
@@ -913,17 +1000,25 @@ namespace decision_jungle {
              * @param _nodes The corresponding parent nodes
              * @param _childNodeCount The number of child nodes
              */
-            static ptr createChildNodeRowErrorFunction(char _criteria, std::set<TrainingDAGNode::ptr> & _nodes, int _childNodeCount);
+            static ptr createChildRowErrorFunction(char _criteria, NodeRow & _nodes, int _childNodeCount);
             
             /**
-             * Creates a new error functions that measures the error at the child row based on the virtual child
-             * assignments. All the node histograms must be accurate. 
+             * Creates a new error functions that measures the error caused by one single node's threshold settings.
              * 
              * @param _criteria The training criteria (entropy, gini ..)
              * @param _nodes The corresponding parent nodes
              * @param _childNodeCount The number of child nodes
              */
-            static ptr createNewChildNodeRowErrorFunction(char _criteria, std::set<TrainingDAGNode::ptr> & _nodes, TrainingDAGNode::ptr _parent);
+            static ptr createThresholdEntropyErrorFunction(char _criteria, NodeRow & _nodes, TrainingDAGNode::ptr _parent);
+            
+            /**
+             * Creates a new error functions that measures the error caused by one single node's child node assignment.
+             * 
+             * @param _criteria The training criteria (entropy, gini ..)
+             * @param _nodes The corresponding parent nodes
+             * @param _childNodeCount The number of child nodes
+             */
+            static ptr createAssignmentEntropyErrorFunction(char _criteria, NodeRow & _nodes, TrainingDAGNode::ptr _parent, int _childNodeCount);
         };
     };
     
@@ -1014,19 +1109,12 @@ namespace decision_jungle {
         class Factory {
         public:
             /**
-             * Creates a new node entropy error for a single node
-             * 
-             * @param _node The corresponding node
-             */
-            static AbstractErrorFunctionPtr createNodeErrorFunction(TrainingDAGNode::ptr node);
-            
-            /**
              * Creates a new node row entropy error. 
              * This function measures the entropy of a row of nodes. (Not considering links to child nodes). 
              * 
              * @param _nodes The corresponding nodes
              */
-            static AbstractErrorFunctionPtr createNodeRowErrorFunction(std::set<TrainingDAGNode::ptr> & _nodes);
+            static AbstractErrorFunctionPtr createRowErrorFunction(NodeRow & _nodes);
             
             /**
              * Creates a new error functions that measures the error at the child row based on the virtual child
@@ -1035,73 +1123,27 @@ namespace decision_jungle {
              * @param _nodes The corresponding parent nodes
              * @param _childNodeCount The number of child nodes
              */
-            static AbstractErrorFunctionPtr createChildNodeRowErrorFunction(std::set<TrainingDAGNode::ptr> & _nodes, int _childNodeCount);
+            static AbstractErrorFunctionPtr createChildRowErrorFunction(NodeRow & _nodes, int _childNodeCount);
             
             /**
-             * Creates a new error functions that measures the error at the child row based on the virtual child
-             * assignments. All the node histograms must be accurate. 
+             * Creates a new error functions that measures the local error caused by one single node's threshold
+             * settings.
              * 
              * @param _criteria The training criteria (entropy, gini ..)
              * @param _nodes The corresponding parent nodes
-             * @param _childNodeCount The number of child nodes
              */
-            static ptr createNewChildNodeRowErrorFunction(std::set<TrainingDAGNode::ptr> & _nodes, TrainingDAGNode::ptr _parent);
+            static ptr createThresholdEntropyErrorFunction(NodeRow & _nodes, TrainingDAGNode::ptr _parent);
+            
+            /**
+             * Creates a new error functions that measures the error caused by one single node's child node assignment.
+             * 
+             * @param _criteria The training criteria (entropy, gini ..)
+             * @param _nodes The corresponding parent nodes
+             */
+            static ptr createAssignmentEntropyErrorFunction(NodeRow & _nodes, TrainingDAGNode::ptr _parent, int _childNodeCount);
         };
     };
-    
-    /**
-     * Calculates the single node error (standard decision tree error)
-     */
-    class NodeEntropyErrorFunction : public AbstractEntropyErrorFunction {
-    friend class AbstractEntropyErrorFunction::Factory;
-    private:
-        /**
-         * The node we consider
-         */
-        TrainingDAGNode::ptr node;
-    public:
-        /**
-         * Default constructor
-         * @return 
-         */
-        NodeEntropyErrorFunction (TrainingDAGNode::ptr _node) : node(_node) {}
-        
-        /**
-         * Copy constructor
-         */
-        NodeEntropyErrorFunction (const NodeEntropyErrorFunction & other) : node(other.node) {}
-        
-        /**
-         * Assignment operator
-         */
-        NodeEntropyErrorFunction & operator=(const NodeEntropyErrorFunction & other)
-        {
-            // Prevent self assignment
-            if (this != &other)
-            {
-                node = other.node;
-            }
-            return *this;
-        }
-        
-        /**
-         * Destructor
-         */
-        virtual ~NodeEntropyErrorFunction() {}
-        
-        /**
-         * Calculates the error if we split. This function expects the local histograms to be already computed.
-         */
-        float error() const
-        {
-            float dataCount = node->getLeftDataCount() + node->getRightDataCount();
 
-            // Calculate the entropy of the left histogram
-            return node->getLeftDataCount()/dataCount * entropy(node->getLeftHistogram()) + 
-                    node->getRightDataCount()/dataCount * entropy(node->getRightHistogram());
-        }
-    };
-    
     /**
      * Calculates the entropy for an entire row of nodes
      */
@@ -1111,14 +1153,14 @@ namespace decision_jungle {
         /**
          * The row of nodes
          */
-        std::set<TrainingDAGNode::ptr>* row;
+        NodeRow* row;
         
     public:
         /**
          * Default constructor
          * @return 
          */
-        RowEntropyErrorFunction (std::set<TrainingDAGNode::ptr>* _row) : row(_row) {}
+        RowEntropyErrorFunction (NodeRow* _row) : row(_row) {}
         
         /**
          * Copy constructor
@@ -1150,7 +1192,7 @@ namespace decision_jungle {
         {
             float result = 0.;
 
-            for (std::set<TrainingDAGNode::ptr>::iterator it = row->begin(); it != row->end(); ++it)
+            for (NodeRow::iterator it = row->begin(); it != row->end(); ++it)
             {
                  result += 1/static_cast<float>( (*it)->getTrainingSet()->size()) * entropy((*it)->getClassHistogram());
             }
@@ -1169,7 +1211,7 @@ namespace decision_jungle {
         /**
          * The row of nodes
          */
-        std::set<TrainingDAGNode::ptr>* row;
+        NodeRow* row;
         /**
          * Number of child nodes
          */
@@ -1180,7 +1222,7 @@ namespace decision_jungle {
          * Default constructor
          * @return 
          */
-        ChildRowEntropyErrorFunction (std::set<TrainingDAGNode::ptr>* _row, int _childNodeCount) : row(_row), childNodeCount(_childNodeCount) {}
+        ChildRowEntropyErrorFunction (NodeRow* _row, int _childNodeCount) : row(_row), childNodeCount(_childNodeCount) {}
         
         /**
          * Copy constructor
@@ -1235,7 +1277,7 @@ namespace decision_jungle {
             int dataCount = 0;
 
             // Compute the histograms for all child nodes
-            for (std::set<TrainingDAGNode::ptr>::iterator it = row->begin(); it != row->end(); ++it)
+            for (NodeRow::iterator it = row->begin(); it != row->end(); ++it)
             {
                 int leftNode = (*it)->getTempLeft();
                 ClassHistogram::ptr leftHistogram = (*it)->getLeftHistogram();
@@ -1271,13 +1313,13 @@ namespace decision_jungle {
     /**
      * Calculates the entropy error based on a child row
      */
-    class NewChildRowEntropyErrorFunction : public AbstractEntropyErrorFunction {
+    class ThresholdEntropyErrorFunction : public AbstractEntropyErrorFunction {
     friend class AbstractEntropyErrorFunction::Factory;
     private:
         /**
          * The row of nodes
          */
-        std::set<TrainingDAGNode::ptr>* row;
+        NodeRow* row;
         /**
          * The parent node that we optimize
          */
@@ -1303,18 +1345,18 @@ namespace decision_jungle {
          * Default constructor
          * @return 
          */
-        NewChildRowEntropyErrorFunction (std::set<TrainingDAGNode::ptr>* _row, TrainingDAGNode::ptr parent) : row(_row), parent(parent) {}
+        ThresholdEntropyErrorFunction (NodeRow* _row, TrainingDAGNode::ptr parent) : row(_row), parent(parent) {}
         
         /**
          * Copy constructor
          */
-        NewChildRowEntropyErrorFunction (const NewChildRowEntropyErrorFunction & other) : row(other.row), parent(other.parent) {
+        ThresholdEntropyErrorFunction (const ThresholdEntropyErrorFunction & other) : row(other.row), parent(other.parent) {
         }
         
         /**
          * Assignment operator
          */
-        NewChildRowEntropyErrorFunction & operator=(const NewChildRowEntropyErrorFunction & other)
+        ThresholdEntropyErrorFunction & operator=(const ThresholdEntropyErrorFunction & other)
         {
             // Prevent self assignment
             if (this != &other)
@@ -1328,7 +1370,7 @@ namespace decision_jungle {
         /**
          * Destructor
          */
-        virtual ~NewChildRowEntropyErrorFunction() {
+        virtual ~ThresholdEntropyErrorFunction() {
             delete[] leftHistogram;
             delete[] rightHistogram;
             delete[] cleftHistogram;
@@ -1345,6 +1387,83 @@ namespace decision_jungle {
          */
         float error() const;
     };
+
+    
+    /**
+     * Calculates the entropy error based on a child row
+     */
+    class AssignmentEntropyErrorFunction : public AbstractEntropyErrorFunction {
+    friend class AbstractEntropyErrorFunction::Factory;
+    private:
+        /**
+         * The row of nodes
+         */
+        NodeRow* row;
+        /**
+         * The parent node that we optimize
+         */
+        TrainingDAGNode::ptr parent;
+        /**
+         * All child node histograms and data counts
+         */
+        int* histograms;
+        int* dataCounts;
+        float* entropies;
+        int dataCount;
+        
+        /**
+         * Number of child nodes
+         */
+        int childNodeCount;
+        
+    public:
+        /**
+         * Default constructor
+         * @return 
+         */
+        AssignmentEntropyErrorFunction (NodeRow* _row, TrainingDAGNode::ptr parent, int childNodeCount) : row(_row), parent(parent), childNodeCount(childNodeCount) {}
+        
+        /**
+         * Copy constructor
+         */
+        AssignmentEntropyErrorFunction (const AssignmentEntropyErrorFunction & other) : row(other.row), parent(other.parent), childNodeCount(other.childNodeCount) {
+        }
+        
+        /**
+         * Assignment operator
+         */
+        AssignmentEntropyErrorFunction & operator=(const AssignmentEntropyErrorFunction & other)
+        {
+            // Prevent self assignment
+            if (this != &other)
+            {
+                row = other.row;
+                parent = other.parent;
+                childNodeCount = other.childNodeCount;
+            }
+            return *this;
+        }
+        
+        /**
+         * Destructor
+         */
+        virtual ~AssignmentEntropyErrorFunction() {
+            delete[] histograms;
+            delete[] dataCounts;
+            delete[] entropies;
+        }
+        
+        /**
+         * Initializes the left/right histogram
+         */
+        void initHistograms();
+        
+        /**
+         * Calculates the error if we split. This function expects the local histograms to be already computed.
+         */
+        float error() const;
+    };
+    
     
     /**
      * This comparator class allows us to sort a training set according to one feature dimension. 
@@ -1544,7 +1663,7 @@ namespace decision_jungle {
     class TrainingStatistics : public Statistics {
     public:
         typedef TrainingStatistics self;
-        typedef self* ptr;
+        typedef std::shared_ptr<self> ptr;
         
         /**
          * Calculates the error on a training set
@@ -1577,7 +1696,7 @@ namespace decision_jungle {
              */
             static TrainingStatistics::ptr create() 
             {
-                return new self();
+                return TrainingStatistics::ptr(new self());
             }
         };
     };

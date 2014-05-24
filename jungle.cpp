@@ -1,4 +1,8 @@
 #include <map>
+#include <fstream>
+#include <iterator>
+#include <boost/tokenizer.hpp>
+
 
 #include "jungle.h"
 
@@ -64,16 +68,9 @@ PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
 ClassHistogram::ptr Statistics::predictionHistogram(Jungle::ptr _jungle, DataSet::ptr _dataSet)
 {
     ClassHistogram::ptr histogram = ClassHistogram::Factory::createEmpty(0);
-    ProgressBar::ptr progressBar = ProgressBar::Factory::create(_dataSet->size());
     
     for (DataSet::iterator it = _dataSet->begin(); it != _dataSet->end(); ++it)
     {
-        // Display the progress bar
-        if (this->getVerboseMode())
-        {
-            progressBar->update();
-        }
-        
         // Predict the class label
         ClassLabel label = _jungle->predict(*it)->getClassLabel();
         
@@ -105,4 +102,55 @@ DataPoint::ptr DataPoint::Factory::createFromFileRow(const std::vector<std::stri
     }
     
     return dataPoint;
+}
+
+
+DataSet::ptr DataSet::Factory::createFromFile(const std::string & _fileName, bool _verboseMode)
+{
+    // Create a blank training set and load the file line by line
+    DataSet::ptr trainingSet = DataSet::Factory::create();
+    
+    std::string data(_fileName);
+
+    std::ifstream in(data.c_str());
+    if (!in.is_open())
+    {
+        throw RuntimeException("Could not open data set file.");
+    }
+
+    // Count the number of lines in order to display the progress bar
+    std::ifstream countFile(_fileName); 
+    int lineCount = std::count(std::istreambuf_iterator<char>(countFile), std::istreambuf_iterator<char>(), '\n');
+    
+    ProgressBar::ptr progressBar = ProgressBar::Factory::create(lineCount);
+    
+    typedef boost::tokenizer< boost::escaped_list_separator<char> > Tokenizer;
+
+    std::vector< std::string > row;
+    std::string line;
+
+    if (_verboseMode)
+    {
+        std::cout << "Loading data set from " << _fileName << std::endl;
+    }
+    while (std::getline(in,line))
+    {
+        if (_verboseMode)
+        {
+            progressBar->update();
+        }
+        
+        Tokenizer tok(line);
+        row.assign(tok.begin(),tok.end());
+
+        // Do not consider blank line
+        if (row.size() == 0) continue;
+        
+        // Create the corresponding data point by considering only the last columns
+        DataPoint::ptr point = DataPoint::Factory::createFromFileRow(row);
+        trainingSet->push_back(point);
+    }
+    std::cout << "Data set loaded. Number of examples: " << trainingSet->size() << std::endl ;
+    
+    return trainingSet;
 }

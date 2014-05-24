@@ -259,9 +259,26 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
             case 'T':
                 _trainer->setTrainingMethod(ParameterConverter::getChar(it->second));
                 break;
+                
+            case 'B':
+                _trainer->setUseBagging(ParameterConverter::getBool(it->second));
+                break;
+                
+            case 'I':
+                _trainer->setMaxLevelIterations(ParameterConverter::getInt(it->second));
+                break;
+                
+            case 't':
+                _trainer->setUseStochasticThreshold(ParameterConverter::getBool(it->second));
+                break;
+                
+            case 'c':
+                _trainer->setUseStochasticChildNodeAssignment(ParameterConverter::getBool(it->second));
+                break;
         }
     }
 }
+TrainingSet::ptr testSet;
 
 int TrainCLIFunction::execute()
 {
@@ -282,24 +299,34 @@ int TrainCLIFunction::execute()
     loadParametersToTrainer(jungleTrainer);
     
     // Load the training set
+    std::cout << "Load training set" << std::endl;
     TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), true);
+    std::cout << "Load test set" << std::endl;
+    testSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(1), true);
     
     std::cout << std::endl;
     
     // Train the jungle
-  boost::timer t; // start timing
+    // start timing
+    boost::timer t; 
     Jungle::ptr jungle = jungleTrainer->train(trainingSet);
-        std::cout << static_cast<double>(t.elapsed()) << "\n";
+    std::cout << "Training time: " << static_cast<double>(t.elapsed()) << "s\n";
     
     std::cout << std::endl;
   
     // Display some error statistics
     TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
-    statisticsTool->setVerboseMode(true);
-    statisticsTool->trainingError(jungle, trainingSet);
+    
+    std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
+    std::cout << "Test error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
+    
+//    TrainingSet::freeTrainingExamples(trainingSet);
+//    TrainingSet::freeTrainingExamples(testSet);
     
     // Save the jungle in a file
 //    jungle->storeInFile(getArguments()->getArguments().at(1));
+    
+    delete jungleTrainer;
     
     return 0;
 }
@@ -319,7 +346,11 @@ const char* TrainCLIFunction::help()
             " -W [int]      Maximum width of each DAG\n"
             " -S [int]      Minimum number of training examples at a node in order to keep splitting it\n"
             " -C [int]      Minimum number of training examples at a child node in order to make a split\n"
-            " -T ['e', 'g'] Training method. 'e': Entropy/Information gain, 'g': Gini Index\n\n"
+            " -T ['e', 'g'] Training method. 'e': Entropy/Information gain, 'g': Gini Index\n"
+            " -B [bool]     Whether of not to use bagging. See also -N\n"
+            " -I [int]      Maximum number of iterations at each level\n"
+            " -t [bool]    Whether or not to use stochastic threshold selection\n"
+            " -c [bool]    Whether or not to use stochastic child node assignment optimization\n\n"
             "DESCRIPTION\n"
             " This command trains a new decision jungle on the training set\n"
             " stored in {trainingset}. The trained model will be saved in\n"
