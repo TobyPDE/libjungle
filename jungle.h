@@ -97,7 +97,7 @@ namespace decision_jungle
         // We use a vector because we need to sort the set 
         typedef std::vector<DataPoint::ptr> self;
         typedef self::iterator iterator;
-        typedef self* ptr;
+        typedef std::shared_ptr<self> ptr;
         
         /**
          * A factory class for training sets
@@ -109,9 +109,18 @@ namespace decision_jungle
              */
             static DataSet::ptr create() 
             {
-                DataSet::ptr result = new self();
+                DataSet::ptr result (new self());
                 return result;
             }
+            
+            /**
+             * Loads a training set from a file
+             * 
+             * @param _fileName The filename
+             * @param _verboseMode
+             * @return The loaded training set
+             */
+            static DataSet::ptr createFromFile(const std::string & _fileName, bool _verboseMode);
         };
     };
     
@@ -180,7 +189,7 @@ namespace decision_jungle
         
     public:
         typedef PredictionResult self;
-        typedef self* ptr;
+        typedef std::shared_ptr<self> ptr;
         
         /**
          * Default constructor
@@ -245,7 +254,7 @@ namespace decision_jungle
              */
             static PredictionResult::ptr create(const ClassLabel _classLabel, const float _confidence)
             {
-                PredictionResult::ptr result = new PredictionResult::self(_classLabel, _confidence);
+                PredictionResult::ptr result (new PredictionResult::self(_classLabel, _confidence));
                 return result;
             }
 
@@ -257,7 +266,7 @@ namespace decision_jungle
              */
             static PredictionResult::ptr create(const ClassLabel _classLabel)
             {
-                PredictionResult::ptr result = new PredictionResult::self(_classLabel, 0);
+                PredictionResult::ptr result (new PredictionResult::self(_classLabel, 0));
                 return result;
             }
         };
@@ -268,7 +277,9 @@ namespace decision_jungle
      */
     class DAGNode {
     public:
-        typedef DAGNode self;	typedef DAGNode* ptr;
+        typedef DAGNode self;
+        typedef self* ptr;
+        
     private:
         /**
          * The feature ID (feature vector index to test) that is tested at this node
@@ -306,6 +317,43 @@ namespace decision_jungle
         void initParameters();
         
     public:
+        virtual ~DAGNode()
+        {
+            delete classHistogram;
+        }
+        
+        /**
+         * Deletes a DAG given by its root node
+         */
+        static void deleteDAG(DAGNode::ptr root)
+        {
+            // Put all nodes into a set and then iterate over the set to delete all nodes
+            std::vector<DAGNode::ptr> queue;
+            std::set<DAGNode::ptr> deletionSet;
+            
+            // Start with the root node
+            queue.push_back(root);
+            
+            while (queue.size() > 0)
+            {
+                DAGNode::ptr current = queue.back();
+                queue.pop_back();
+                
+                deletionSet.insert(current);
+                
+                if (current->getLeft() != 0)
+                {
+                    queue.push_back(current->getLeft());
+                    queue.push_back(current->getRight());
+                }
+            }
+            
+            for (std::set<DAGNode::ptr>::iterator it = deletionSet.begin(); it != deletionSet.end(); ++it)
+            {
+                delete *it;
+            }
+        }
+        
         /**
          * Returns the feature ID
          * 
@@ -497,7 +545,16 @@ namespace decision_jungle
         
     public:
         typedef Jungle self;
-        typedef self* ptr;
+        typedef std::shared_ptr<self> ptr;
+        
+        virtual ~Jungle()
+        {
+            // Delete all DAGs
+            for (std::set<DAGNode::ptr>::iterator it = dags.begin(); it != dags.end(); ++it)
+            {
+                DAGNode::deleteDAG(*it);
+            }
+        }
         
         /**
          * Returns the trained DAGs
@@ -528,7 +585,7 @@ namespace decision_jungle
              */
             static Jungle::ptr create()
             {
-                return new Jungle;
+                return Jungle::ptr(new Jungle);
             }
         };
     };
@@ -537,39 +594,9 @@ namespace decision_jungle
      * This class calculates some statistics. 
      */
     class Statistics {
-    private:
-        /**
-         * Verbose mode: Displays progress bars and results
-         */
-        bool verboseMode;
     public:
-        /**
-         * Default constructor
-         */
-        Statistics() : verboseMode(0) {}
-        
         typedef Statistics self;
-        typedef self* ptr;
-        
-        /**
-         * Returns the verbose mode state
-         * 
-         * @return true if verbose mode is on
-         */
-        bool getVerboseMode()
-        {
-            return verboseMode;
-        }
-        
-        /**
-         * Sets the verbose mode
-         * 
-         * @param _verboseMode
-         */
-        void setVerboseMode(bool _verboseMode)
-        {
-            verboseMode = _verboseMode;
-        }
+        typedef std::shared_ptr<self> ptr;
         
         /**
          * Calculates a histogram of predicted class labels for a data set
@@ -592,7 +619,7 @@ namespace decision_jungle
              */
             static Statistics::ptr create() 
             {
-                return new self();
+                return Statistics::ptr(new self());
             }
         };
     };

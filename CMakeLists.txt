@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 project(DecisionJungle)
 set (DecisionJungle_VERSION_MAJOR 1)
 set (DecisionJungle_VERSION_MINOR 0)
-find_package( Boost 1.55.0 COMPONENTS system REQUIRED )
+find_package( Boost 1.40.0 COMPONENTS system REQUIRED )
 include_directories( ${Boost_INCLUDE_DIR} )
 add_executable(jungle cliInterface.cpp jungleTrain.cpp jungle.cpp )
 configure_file (

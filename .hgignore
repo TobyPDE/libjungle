@@ -1,4 +1,5 @@
 syntax: glob
+.DS_Store
 config.h
 jungle
 CMakeCache.txt
@@ -43,3 +44,6 @@ dist/
 nbdist/
 nbactions.xml
 nb-configuration.xml
+mnist_test.txt
+mnist_train.txt
+
