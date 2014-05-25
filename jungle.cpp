@@ -5,6 +5,7 @@
 
 
 #include "jungle.h"
+#include "jungleTrain.h"
 
 using namespace decision_jungle;
 
@@ -14,11 +15,25 @@ PredictionResult::ptr DAGNode::predict(DataPoint::ptr featureVector) const
     if (!left)
     {
         // Nope, return the class label
-        return PredictionResult::Factory::create(getClassLabel(), getClassHistogram()->at(getClassLabel()));
+        
+        // Compute the relative confidence
+        int dataCount = 0;
+        for (ClassHistogram::iterator it = getClassHistogram()->begin(); it != getClassHistogram()->end(); ++it)
+        {
+            dataCount += *it;
+        }
+        if (dataCount > 0)
+        {
+            return PredictionResult::Factory::create(getClassLabel(), getClassHistogram()->at(getClassLabel())/static_cast<double>(dataCount));
+        }
+        else
+        {
+            return PredictionResult::Factory::create(getClassLabel(), 0);
+        }
     }
     else
     {
-        if (featureVector->at(featureID) < threshold)
+        if (featureVector->at(featureID) <= threshold)
         {
             return left->predict(featureVector);
         }
@@ -32,7 +47,7 @@ PredictionResult::ptr DAGNode::predict(DataPoint::ptr featureVector) const
 PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
 {
     // Use a majority vote
-    std::map<ClassLabel, float> votes;
+    std::map<ClassLabel, double> votes;
     PredictionResult::ptr prediction;
     
     for (std::set<DAGNode::ptr>::iterator it = dags.begin(); it != dags.end(); ++it)
@@ -50,10 +65,10 @@ PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
     }
     
     // Find the best class
-    float bestScore = 0;
+    double bestScore = 0;
     ClassLabel bestLabel = -1;
     
-    for (std::map<ClassLabel, float>::iterator it = votes.begin(); it != votes.end(); ++it)
+    for (std::map<ClassLabel, double>::iterator it = votes.begin(); it != votes.end(); ++it)
     {
         if (it->second > bestScore)
         {

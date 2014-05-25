@@ -185,7 +185,7 @@ namespace decision_jungle
         /**
          * The prediction confidence
          */
-        float confidence;
+        double confidence;
         
     public:
         typedef PredictionResult self;
@@ -194,7 +194,7 @@ namespace decision_jungle
         /**
          * Default constructor
          */
-        PredictionResult(ClassLabel _classLabel, float _confidence) : classLabel(_classLabel), confidence(_confidence) {}
+        PredictionResult(ClassLabel _classLabel, double _confidence) : classLabel(_classLabel), confidence(_confidence) {}
         
         /**
          * Copy constructor
@@ -235,7 +235,7 @@ namespace decision_jungle
          * 
          * @return prediction confidence
          */
-        float getConfidence()
+        double getConfidence()
         {
             return confidence;
         }
@@ -252,7 +252,7 @@ namespace decision_jungle
              * @param _confidence The confidence
              * @return new Prediction result
              */
-            static PredictionResult::ptr create(const ClassLabel _classLabel, const float _confidence)
+            static PredictionResult::ptr create(const ClassLabel _classLabel, const double _confidence)
             {
                 PredictionResult::ptr result (new PredictionResult::self(_classLabel, _confidence));
                 return result;
@@ -686,7 +686,7 @@ namespace decision_jungle
         void update(int _state)
         {
             state = _state;
-            float progress = 0;
+            double progress = 0;
             // Relative progress
             if (total <= 0)
             {
@@ -694,7 +694,7 @@ namespace decision_jungle
             }
             else
             {
-                progress = _state/static_cast<float>(total);
+                progress = _state/static_cast<double>(total);
             }
                 
             if (static_cast<int>(progress*width) == _lastUpperBound && _lastUpperBound > 0)

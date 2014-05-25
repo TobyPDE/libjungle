@@ -324,9 +324,9 @@ int TrainCLIFunction::execute()
     
     // Load the training set
     std::cout << "Load training set" << std::endl;
-    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), true);
+    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), false);
     std::cout << "Load test set" << std::endl;
-    testSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(1), true);
+    testSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(1), false);
     
     std::cout << std::endl;
     
