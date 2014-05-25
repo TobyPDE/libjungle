@@ -6,6 +6,8 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <cmath>
+
 #include "jungle.h"
 
 /**
@@ -28,7 +30,7 @@ namespace decision_jungle {
     class TrainingSet;
     class JungleTrainer;
     typedef JungleTrainer* JungleTrainerPtr;
-    typedef std::vector< std::vector<float> > Matrix;
+    typedef std::vector< std::vector<double> > Matrix;
     typedef std::vector< TrainingDAGNode* > NodeRow;
     
     
@@ -245,6 +247,11 @@ namespace decision_jungle {
          */
         DAGTrainerPtr trainer;
         
+        /**
+         * True if the node is pure
+         */
+        bool pure;
+        
     public:
         typedef TrainingDAGNode self;
         typedef self* ptr;
@@ -271,6 +278,11 @@ namespace decision_jungle {
         }
         
         /**
+         * Computes the left and right histograms
+         */
+        void updateLeftRightHistogram();
+        
+        /**
          * Resets the left and right histograms
          */
         void resetLeftRightHistogram();
@@ -291,7 +303,8 @@ namespace decision_jungle {
                 leftDataCount(other.leftDataCount), 
                 rightDataCount(other.rightDataCount), 
                 tempLeft(other.tempLeft), 
-                tempRight(other.tempRight) {}
+                tempRight(other.tempRight),
+                pure(false) {}
         
         /**
          * Assignment operator
@@ -418,6 +431,16 @@ namespace decision_jungle {
         }
         
         /**
+         * Returns whether of not the node is pure
+         * 
+         * @return true if the node is pure
+         */
+        bool isPure()
+        {
+            return pure;
+        }
+        
+        /**
          * Finds an optimal threshold based on the provided error function
          * 
          * @param error An error function to measure the entropy of the current setting
@@ -431,6 +454,7 @@ namespace decision_jungle {
          * @param error An error function to measure the entropy of the current setting
          * @return true if the assignment was changed.
          */
+        bool findCoherentChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
         bool findLeftChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
         bool findRightChildNodeAssignment(AbstractErrorFunctionPtr, int childNodeCount);
         
@@ -996,7 +1020,7 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        virtual float error() const = 0;
+        virtual double error() const = 0;
         
         virtual ~AbstractErrorFunction() {}
         /**
@@ -1048,6 +1072,7 @@ namespace decision_jungle {
      */
     class AbstractEntropyErrorFunction : public AbstractErrorFunction {
     protected:
+        
         /**
          * fast approximate log2(x) from Paul Mineiro <paul@mineiro.com>
          * 
@@ -1055,11 +1080,15 @@ namespace decision_jungle {
          * Piotr's Image&Video Toolbox      Version 3.24
          * Copyright 2013 Piotr Dollar.  [pdollar-at-caltech.edu]
          */
-        float flog2( float x ) const
+        double flog2( double x ) const
         {
-            union { float f; uint32_t i; } vx = { x };
-            union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-            float y = float(vx.i); y *= 1.1920928955078125e-7f;
+            static double log2 = std::log(2.);
+            
+            return std::log(x)/log2;
+            
+            union { double f; uint32_t i; } vx = { x };
+            union { uint32_t i; double f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+            double y = double(vx.i); y *= 1.1920928955078125e-7f;
             return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
         }
         
@@ -1069,14 +1098,14 @@ namespace decision_jungle {
          * @param histogram The histogram
          * @return The calculated entropy
          */
-        float entropy(ClassHistogram::ptr histogram) const
+        double entropy(ClassHistogram::ptr histogram) const
         {
             int classCount = histogram->size();
 
-            float entropy = 0.;
+            double entropy = 0.;
 
             // Get the total number of elements in the histogram
-            float sum = 0;
+            double sum = 0;
             for (int i = 0; i < classCount; i++)
             {
                 sum += histogram->at(i);
@@ -1100,12 +1129,12 @@ namespace decision_jungle {
          * @param histogram The array histogram
          * @param classCount The number of classes
          */
-        float entropy(const int* histogram, int classCount) const
+        double entropy(const int* histogram, int classCount) const
         {
-            float entropy = 0.;
+            double entropy = 0.;
 
             // Get the total number of elements in the histogram
-            float sum = 0;
+            double sum = 0;
             for (int i = 0; i < classCount; i++)
             {
                 sum += histogram[i];
@@ -1209,13 +1238,20 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        float error() const
+        double error() const
         {
-            float result = 0.;
+            double result = 0.;
 
+            // Determine the complete data count over all nodes
+            int dataCount = 0;
             for (NodeRow::iterator it = row->begin(); it != row->end(); ++it)
             {
-                 result += 1/static_cast<float>( (*it)->getTrainingSet()->size()) * entropy((*it)->getClassHistogram());
+                dataCount += static_cast<int>((*it)->getTrainingSet()->size());
+            }
+            //printf("parent count: %d\n", dataCount);
+            for (NodeRow::iterator it = row->begin(); it != row->end(); ++it)
+            {
+                 result += static_cast<double>( (*it)->getTrainingSet()->size())/static_cast<double>(dataCount) * entropy((*it)->getClassHistogram());
             }
 
             return result;
@@ -1272,9 +1308,9 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        float error() const
+        double error() const
         {
-            float result = 0.;
+            double result = 0.;
             
             int classCount = (*row->begin())->getClassHistogram()->size();
             
@@ -1321,7 +1357,7 @@ namespace decision_jungle {
             // Calculate the entropy based on the built up histograms
             for (int i = 0; i < childNodeCount; i++)
             {
-                result += dataCounts[i]/static_cast<float>(dataCount) * entropy(histograms + i*classCount, classCount);
+                result += dataCounts[i]/static_cast<double>(dataCount) * entropy(histograms + i*classCount, classCount);
             }
 
             delete[] histograms;
@@ -1406,7 +1442,7 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        float error() const;
+        double error() const;
     };
 
     
@@ -1429,7 +1465,7 @@ namespace decision_jungle {
          */
         int* histograms;
         int* dataCounts;
-        float* entropies;
+        double* entropies;
         int dataCount;
         
         /**
@@ -1482,7 +1518,7 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        float error() const;
+        double error() const;
     };
     
     
@@ -1596,7 +1632,7 @@ namespace decision_jungle {
         static ClassLabel histogramArgMax(ClassHistogram::ptr _hist)
         {
             int classCount = _hist->size();
-            ClassLabel bestClassLabel = 0;
+            ClassLabel bestClassLabel = -1;
             ClassHistogram::value bestScore = 0;
             
             // Initialize the histogram
@@ -1693,7 +1729,7 @@ namespace decision_jungle {
          * @param _trainingSet
          * @return Training error
          */
-        float trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet);
+        double trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet);
         
         /**
          * Calculates a confusion matrix on a training set
