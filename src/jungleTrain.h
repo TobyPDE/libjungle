@@ -491,17 +491,6 @@ namespace decision_jungle {
         int maxWidth;
         
         /**
-         * The minimum number of training examples that must be present in a node in oder to continue splitting
-         */
-        int minSplitCount;
-        
-        /**
-         * The minimum number of training examples that must result in each of the children in order to perform the 
-         * split
-         */
-        int minChildSplitCount;
-        
-        /**
          * The used training criterion (entropy or gini)
          */
         char trainingMethod;
@@ -701,46 +690,6 @@ namespace decision_jungle {
         int getMaxWidth()
         {
             return maxWidth;
-        }
-        
-        /**
-         * Sets the min split count
-         * 
-         * @param _minSplitCount
-         */
-        void setMinSpliCount(int _minSplitCount)
-        {
-            minSplitCount = _minSplitCount;
-        }
-        
-        /**
-         * Returns the min split count
-         * 
-         * @return min split count
-         */
-        int getMinSplitCount()
-        {
-            return minSplitCount;
-        }
-        
-        /**
-         * Sets the min child split count
-         * 
-         * @param _minChildSplitCount
-         */
-        void setMinChildSplitCount(int _minChildSplitCount)
-        {
-            minChildSplitCount = _minChildSplitCount;
-        }
-        
-        /**
-         * Returns the min child split count
-         * 
-         * @return min child split count
-         */
-        int getMinChildSplitCount()
-        {
-            return minChildSplitCount;
         }
         
         /**

@@ -248,14 +248,6 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
                 _trainer->setMaxWidth(ParameterConverter::getInt(it->second));
                 break;
                 
-            case 'S':
-                _trainer->setMinSpliCount(ParameterConverter::getInt(it->second));
-                break;
-                
-            case 'C':
-                _trainer->setMinChildSplitCount(ParameterConverter::getInt(it->second));
-                break;
-                
             case 'T':
                 _trainer->setTrainingMethod(ParameterConverter::getChar(it->second));
                 break;
@@ -311,8 +303,6 @@ int TrainCLIFunction::execute()
         std::cout << "numFeatureSamples " << jungleTrainer->getNumFeatureSamples() << std::endl;
         std::cout << "maxDepth " << jungleTrainer->getMaxDepth() << std::endl;
         std::cout << "maxWidth " << jungleTrainer->getMaxWidth() << std::endl;
-        std::cout << "minSplitCount " << jungleTrainer->getMinSplitCount() << std::endl;
-        std::cout << "minChildSplitCount " << jungleTrainer->getMinChildSplitCount() << std::endl;
         std::cout << "trainingMethod " << jungleTrainer->getTrainingMethod() << std::endl;
         std::cout << "useBagging " << jungleTrainer->getUseBagging() << std::endl;
         std::cout << "maxLevelIterations " << jungleTrainer->getMaxLevelIterations() << std::endl;
@@ -368,13 +358,11 @@ const char* TrainCLIFunction::help()
             " -F [int]      The number of features that are sampled per node\n"
             " -D [int]      Maximum depth of each DAG\n"
             " -W [int]      Maximum width of each DAG\n"
-            " -S [int]      Minimum number of training examples at a node in order to keep splitting it\n"
-            " -C [int]      Minimum number of training examples at a child node in order to make a split\n"
             " -T ['e', 'g'] Training method. 'e': Entropy/Information gain, 'g': Gini Index\n"
             " -B [bool]     Whether of not to use bagging. See also -N\n"
             " -I [int]      Maximum number of iterations at each level\n"
-            " -t [bool]    Whether or not to use stochastic threshold selection\n"
-            " -c [bool]    Whether or not to use stochastic child node assignment optimization\n\n"
+            " -t [bool]     Whether or not to use stochastic threshold selection\n"
+            " -c [bool]     Whether or not to use stochastic child node assignment optimization\n\n"
             "DESCRIPTION\n"
             " This command trains a new decision jungle on the training set\n"
             " stored in {trainingset}. The trained model will be saved in\n"
