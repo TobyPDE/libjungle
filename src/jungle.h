@@ -327,6 +327,7 @@ namespace decision_jungle
          */
         static void deleteDAG(DAGNode::ptr root)
         {
+			return;
             // Put all nodes into a set and then iterate over the set to delete all nodes
             std::vector<DAGNode::ptr> queue;
             std::set<DAGNode::ptr> deletionSet;

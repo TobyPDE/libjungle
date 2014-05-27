@@ -23,14 +23,6 @@ void AbstractTrainer::validateParameters() throw(ConfigurationException)
     {
         throw ConfigurationException("max width must be greater than 0.");
     }
-    if (minSplitCount < 0)
-    {
-        throw ConfigurationException("min split count must be greater than 0.");
-    }
-    if (minChildSplitCount < 0)
-    {
-        throw ConfigurationException("min child split count must be greater than 0.");
-    }
     if (trainingMethod != AbstractErrorFunction::error_entropy && trainingMethod != AbstractErrorFunction::error_gini)
     {
         throw ConfigurationException("Unknown training method.");
@@ -143,6 +135,7 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
         parentNodes = trainLevel(parentNodes, childNodeCount);
         
         printf("%d, %f, %f, %d, %d \n", level, statisticsTool->trainingError(jungle, trainingSet), statisticsTool->trainingError(jungle, testSet), totalNodeCount, leafNodeCount);
+        std::cout.flush();
     
         // Stop when there is nothing more to do
         if (parentNodes.size() == 0)
@@ -629,8 +622,6 @@ DAGTrainer::ptr DAGTrainer::Factory::createFromJungleTrainer(JungleTrainer::ptr 
     // Transfer all parameter
     result->setMaxDepth(_jungleTrainer->getMaxDepth());
     result->setMaxWidth(_jungleTrainer->getMaxWidth());
-    result->setMinSpliCount(_jungleTrainer->getMinSplitCount());
-    result->setMinChildSplitCount(_jungleTrainer->getMinChildSplitCount());
     result->setTrainingMethod(_jungleTrainer->getTrainingMethod());
     result->setVerboseMode(_jungleTrainer->getVerboseMode());
     result->setNumFeatureSamples(_jungleTrainer->getNumFeatureSamples());
@@ -647,8 +638,6 @@ void AbstractTrainer::Factory::init(AbstractTrainer::ptr _trainer)
 {
     _trainer->maxDepth = 256;
     _trainer->maxWidth = 128;
-    _trainer->minSplitCount = 1;
-    _trainer->minChildSplitCount = 1;
     _trainer->trainingMethod = AbstractErrorFunction::error_entropy;
     _trainer->verboseMode = false;
     _trainer->useBagging = false;
@@ -689,6 +678,9 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
         printf("Number of DAGs to train: %d\n", getNumDAGs());
     }
     
+    // Display some error statistics
+    TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
+
     for (int i = 0; i < numDAGs; i++)
     {
         if (getVerboseMode())
@@ -707,6 +699,10 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
         DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(this, sampledSet);
         jungle->getDAGs().insert(trainer->train());
         delete trainer;
+        std::cout << "DAG completed\n";
+        std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
+        std::cout << "Test error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
+        std::cout << "----------------------------\n";
     }
     
     return jungle;
