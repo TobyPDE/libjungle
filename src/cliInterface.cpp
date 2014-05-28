@@ -322,7 +322,7 @@ int TrainCLIFunction::execute()
     // start timing
     boost::timer t; 
     Jungle::ptr jungle = jungleTrainer->train(trainingSet);
-    std::cout << "Training time: " << static_cast<double>(t.elapsed()) << "s\n";
+    std::cout << "Training time: " << static_cast<float>(t.elapsed()) << "s\n";
     
     std::cout << std::endl;
   

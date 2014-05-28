@@ -48,7 +48,7 @@ namespace decision_jungle
      */
     class DataPoint {
     public:
-        typedef std::vector<double> self;
+        typedef std::vector<float> self;
         typedef self* ptr;
         
         /**
@@ -154,7 +154,7 @@ namespace decision_jungle
          * @param x
          * @return log_2(x)
          */
-        double log2(double x) const
+        float log2(float x) const
         {
             return std::log(x)/std::log(2);
         }
@@ -254,7 +254,7 @@ namespace decision_jungle
         /**
          * Returns the mass
          */
-        double getMass() const { return mass; }
+        float getMass() const { return mass; }
         
         /**
          * Iterator interface from STL
@@ -267,14 +267,14 @@ namespace decision_jungle
          * 
          * @return The calculated entropy
          */
-        double entropy() const
+        float entropy() const
         {
             if (mass == 0) return 0;
             
-            double entropy = 0;
+            float entropy = 0;
             
             // Get the total number of elements in the histogram
-            double sum = getMass();
+            float sum = getMass();
 
             for (int i = 0; i < bins; i++)
             {
@@ -317,7 +317,7 @@ namespace decision_jungle
         /**
          * The prediction confidence
          */
-        double confidence;
+        float confidence;
         
     public:
         typedef PredictionResult self;
@@ -326,7 +326,7 @@ namespace decision_jungle
         /**
          * Default constructor
          */
-        PredictionResult(ClassLabel _classLabel, double _confidence) : classLabel(_classLabel), confidence(_confidence) {}
+        PredictionResult(ClassLabel _classLabel, float _confidence) : classLabel(_classLabel), confidence(_confidence) {}
         
         /**
          * Copy constructor
@@ -367,7 +367,7 @@ namespace decision_jungle
          * 
          * @return prediction confidence
          */
-        double getConfidence()
+        float getConfidence()
         {
             return confidence;
         }
@@ -384,7 +384,7 @@ namespace decision_jungle
              * @param _confidence The confidence
              * @return new Prediction result
              */
-            static PredictionResult::ptr create(const ClassLabel _classLabel, const double _confidence)
+            static PredictionResult::ptr create(const ClassLabel _classLabel, const float _confidence)
             {
                 INC_DEBUG
                 PredictionResult::ptr result (new PredictionResult::self(_classLabel, _confidence));
@@ -423,7 +423,7 @@ namespace decision_jungle
         /**
          * The applied threshold
          */
-        double threshold;
+        float threshold;
         
         /**
          * The left child node
@@ -503,7 +503,7 @@ namespace decision_jungle
          * 
          * @return selected threshold value
          */
-        double getThreshold() const
+        float getThreshold() const
         {
             return threshold;
         }
@@ -543,7 +543,7 @@ namespace decision_jungle
          * 
          * @param _threshold The new threshold
          */
-        void setThreshold(double _threshold)
+        void setThreshold(float _threshold)
         {
             threshold = _threshold;
         }
@@ -813,7 +813,7 @@ namespace decision_jungle
         void update(int _state)
         {
             state = _state;
-            double progress = 0;
+            float progress = 0;
             // Relative progress
             if (total <= 0)
             {
@@ -821,7 +821,7 @@ namespace decision_jungle
             }
             else
             {
-                progress = _state/static_cast<double>(total);
+                progress = _state/static_cast<float>(total);
             }
                 
             if (static_cast<int>(progress*width) == _lastUpperBound && _lastUpperBound > 0)

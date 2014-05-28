@@ -28,7 +28,7 @@ namespace decision_jungle {
     class TrainingSet;
     class JungleTrainer;
     typedef JungleTrainer* JungleTrainerPtr;
-    typedef std::vector< std::vector<double> > Matrix;
+    typedef std::vector< std::vector<float> > Matrix;
     typedef std::vector< TrainingDAGNode* > NodeRow;
     
     /**
@@ -915,9 +915,9 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        double error() const
+        float error() const
         {
-            double result = 0.;
+            float result = 0.;
 
             // Determine the complete data count over all nodes
             int dataCount = 0;
@@ -928,7 +928,7 @@ namespace decision_jungle {
             
             for (NodeRow::iterator it = row.begin(); it != row.end(); ++it)
             {
-                 result += static_cast<double>( (*it)->getTrainingSet()->size()) / static_cast<double>(dataCount) * (*it)->getClassHistogram()->entropy();
+                 result += static_cast<float>( (*it)->getTrainingSet()->size()) / static_cast<float>(dataCount) * (*it)->getClassHistogram()->entropy();
             }
 
             return result;
@@ -983,9 +983,9 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        double error() const
+        float error() const
         {
-            double result = 0.;
+            float result = 0.;
             
             int classCount = (*row.begin())->getClassHistogram()->size();
             
@@ -1023,7 +1023,7 @@ namespace decision_jungle {
             // Calculate the entropy based on the built up histograms
             for (int i = 0; i < childNodeCount; i++)
             {
-                result += histograms[i].getMass()/static_cast<double>(dataCount) * histograms[i].entropy();
+                result += histograms[i].getMass()/static_cast<float>(dataCount) * histograms[i].entropy();
             }
 
             delete[] histograms;
@@ -1122,11 +1122,11 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        double error() const
+        float error() const
         {
-            double result = 0.;
+            float result = 0.;
             
-            double dataCount = cleftHistogram.getMass() + crightHistogram.getMass();
+            float dataCount = cleftHistogram.getMass() + crightHistogram.getMass();
             result = cleftHistogram.getMass()/dataCount * cleftHistogram.entropy();
             result += crightHistogram.getMass()/dataCount * crightHistogram.entropy();
 
@@ -1151,7 +1151,7 @@ namespace decision_jungle {
          * All child node histograms and data counts
          */
         ClassHistogram* histograms;
-        double* entropies;
+        float* entropies;
         int dataCount;
         
         /**
@@ -1204,9 +1204,9 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        double error() 
+        float error() 
         {
-            double error = 0;
+            float error = 0;
 
             int classCount = (*row.begin())->getClassHistogram()->size();
 
@@ -1222,7 +1222,7 @@ namespace decision_jungle {
                         currentHist.set(j, histograms[i].at(j) + leftHistogram->at(j));
                     }
 
-                    double currentDataCount = currentHist.getMass();
+                    float currentDataCount = currentHist.getMass();
                     error += currentDataCount/dataCount * currentHist.entropy();
                 }
                 else if (i == parent->getTempRight() && i != parent->getTempLeft())
@@ -1235,7 +1235,7 @@ namespace decision_jungle {
                         currentHist.set(j, histograms[i].at(j) + rightHistogram->at(j));
                     }
 
-                    double currentDataCount = currentHist.getMass();
+                    float currentDataCount = currentHist.getMass();
                     error += currentDataCount/dataCount * currentHist.entropy();
                 }
                 else if (i == parent->getTempRight() && i == parent->getTempLeft())
@@ -1249,7 +1249,7 @@ namespace decision_jungle {
                         currentHist.set(j, histograms[i].at(j) + leftHistogram->at(j) + rightHistogram->at(j));
                     }
 
-                    double currentDataCount = currentHist.getMass();
+                    float currentDataCount = currentHist.getMass();
                     error += currentDataCount/dataCount * currentHist.entropy();
                 }
                 else
@@ -1467,7 +1467,7 @@ namespace decision_jungle {
          * @param _trainingSet
          * @return Training error
          */
-        double trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet);
+        float trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet);
         
         /**
          * Calculates a confusion matrix on a training set

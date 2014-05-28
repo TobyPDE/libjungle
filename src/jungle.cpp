@@ -42,7 +42,7 @@ PredictionResult::ptr DAGNode::predict(DataPoint::ptr featureVector) const
 PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
 {
     // Use a majority vote
-    std::map<ClassLabel, double> votes;
+    std::map<ClassLabel, float> votes;
     PredictionResult::ptr prediction;
     
     for (std::set<DAGNode::ptr>::iterator it = dags.begin(); it != dags.end(); ++it)
@@ -60,10 +60,10 @@ PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
     }
     
     // Find the best class
-    double bestScore = 0;
+    float bestScore = 0;
     ClassLabel bestLabel = -1;
     
-    for (std::map<ClassLabel, double>::iterator it = votes.begin(); it != votes.end(); ++it)
+    for (std::map<ClassLabel, float>::iterator it = votes.begin(); it != votes.end(); ++it)
     {
         if (it->second > bestScore)
         {
