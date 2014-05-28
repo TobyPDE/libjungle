@@ -157,7 +157,6 @@ namespace decision_jungle {
         {
             for (TrainingSet::iterator it = _trainingSet->begin(); it != _trainingSet->end(); ++it)
             {
-            DEC_DEBUG
                 delete *it;
             }
             _trainingSet->erase(_trainingSet->begin(), _trainingSet->end());
@@ -173,7 +172,6 @@ namespace decision_jungle {
              */
             static TrainingSet::ptr create() 
             {
-                INC_DEBUG
                 TrainingSet::ptr result(new self());
                 return result;
             }
@@ -750,7 +748,6 @@ namespace decision_jungle {
              */
             static DAGTrainer::ptr createForTraingSet(TrainingSet::ptr _trainingSet)
             {
-                INC_DEBUG
                 DAGTrainer::ptr trainer = new DAGTrainer();
                 trainer->trainingSet = _trainingSet;
                 
@@ -861,7 +858,6 @@ namespace decision_jungle {
              */
             static JungleTrainer::ptr create()
             {
-                INC_DEBUG
                 JungleTrainer::ptr trainer(new JungleTrainer());
                 
                 // Initialize the trainer with the default parameters
@@ -990,7 +986,6 @@ namespace decision_jungle {
             int classCount = (*row.begin())->getClassHistogram()->size();
             
             // We build up a histogram for every (virtual) child node
-                INC_DEBUG
             ClassHistogram* histograms = new ClassHistogram[childNodeCount];
             
             // Initialize the histograms
@@ -1491,7 +1486,6 @@ namespace decision_jungle {
              */
             static TrainingStatistics::ptr create() 
             {
-                INC_DEBUG
                 return TrainingStatistics::ptr(new self());
             }
         };

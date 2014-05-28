@@ -19,8 +19,6 @@
 
 using namespace decision_jungle;
 
-extern int decision_jungle::__debugCount;
-
 /**
  * Register all available functions
  */
@@ -38,8 +36,7 @@ int main(int argc, const char** argv)
         // Try to load the requested function
         AbstractCLIFunction::ptr function = AbstractCLIFunction::Factory::createFromArgumentBag(arguments);
         // Execute the requested function
-        function->execute();
-        std::cout << "\nResult: "<< __debugCount << "\n";
+        return function->execute();
     }
     catch (std::exception & e) {
         std::cout << "There was an error." << std::endl;
@@ -338,7 +335,6 @@ int TrainCLIFunction::execute()
     // Save the jungle in a file
 //    jungle->storeInFile(getArguments()->getArguments().at(1));
     
-    DEC_DEBUG
     delete jungleTrainer;
     
     return 0;

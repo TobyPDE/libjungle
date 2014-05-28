@@ -17,9 +17,6 @@
 
 namespace decision_jungle
 {
-    extern int __debugCounter;
-    extern int __debugCount;
-    
     /**
      * This exception is thrown when something unexpected happens during execution. 
      */
@@ -48,7 +45,7 @@ namespace decision_jungle
      */
     class DataPoint {
     public:
-        typedef std::vector<float> self;
+        typedef std::vector<double> self;
         typedef self* ptr;
         
         /**
@@ -69,7 +66,6 @@ namespace decision_jungle
                 {
                     throw RuntimeException("Invalid vector dimension.");
                 }
-                INC_DEBUG
                 ptr featureVector = new self(_dim);
                 
                 // Initialize the vector
@@ -112,7 +108,6 @@ namespace decision_jungle
              */
             static DataSet::ptr create() 
             {
-                INC_DEBUG
                 DataSet::ptr result (new self());
                 return result;
             }
@@ -149,14 +144,18 @@ namespace decision_jungle
         int mass;
         
         /**
-         * Logarithm to base 2
+         * fast approximate log2(x) from Paul Mineiro <paul@mineiro.com>
          * 
-         * @param x
-         * @return log_2(x)
+         * Taken from 
+         * Piotr's Image&Video Toolbox      Version 3.24
+         * Copyright 2013 Piotr Dollar.  [pdollar-at-caltech.edu]
          */
-        float log2(float x) const
+        float flog2( float x ) const
         {
-            return std::log(x)/std::log(2);
+            union { float f; uint32_t i; } vx = { x };
+            union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+            float y = float(vx.i); y *= 1.1920928955078125e-7f;
+            return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
         }
         
     public:
@@ -281,7 +280,7 @@ namespace decision_jungle
                 // Empty bins do not contribute anything
                 if (at(i) > 0 && sum > 0)
                 {
-                    entropy += at(i)/sum * log2(at(i)/sum);
+                    entropy += at(i)/sum * flog2(at(i)/sum);
                 }
             }
 
@@ -386,7 +385,6 @@ namespace decision_jungle
              */
             static PredictionResult::ptr create(const ClassLabel _classLabel, const float _confidence)
             {
-                INC_DEBUG
                 PredictionResult::ptr result (new PredictionResult::self(_classLabel, _confidence));
                 return result;
             }
@@ -399,7 +397,6 @@ namespace decision_jungle
              */
             static PredictionResult::ptr create(const ClassLabel _classLabel)
             {
-                INC_DEBUG
                 PredictionResult::ptr result (new PredictionResult::self(_classLabel, 0));
                 return result;
             }
@@ -656,7 +653,6 @@ namespace decision_jungle
              */
             static DAGNode::ptr create(int classCount)
             {
-                INC_DEBUG
                 DAGNode::ptr node = new DAGNode();
 
                 // Initialize the node
@@ -719,7 +715,6 @@ namespace decision_jungle
              */
             static Jungle::ptr create()
             {
-                INC_DEBUG
                 return Jungle::ptr(new Jungle);
             }
         };
@@ -745,7 +740,6 @@ namespace decision_jungle
              */
             static Statistics::ptr create() 
             {
-                INC_DEBUG
                 return Statistics::ptr(new self());
             }
         };
@@ -877,7 +871,6 @@ namespace decision_jungle
              */
             static ProgressBar::ptr create(int _width, int _total)
             {
-                INC_DEBUG
                 return ptr(new self(_width, _total));
             }
             

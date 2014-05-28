@@ -13,9 +13,6 @@
 
 using namespace decision_jungle;
 
-int decision_jungle::__debugCounter = 0;
-int decision_jungle::__debugCount = 0;
-
 void AbstractTrainer::validateParameters() throw(ConfigurationException)
 {
     if (maxDepth < 1)
@@ -241,10 +238,14 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     
     // Create the child nodes
     NodeRow childNodes(childNodeCount);
+    // Memorize which child nodes don't have a parent node in this variable
+    bool* noParentNode = new bool[childNodeCount];
+    
     for (int i = 0; i < childNodeCount; i++)
     {
         childNodes[i] = TrainingDAGNode::Factory::create(this);
         totalNodeCount++;
+        noParentNode[i] = true;
     }
 
     // Assign the parent to their child nodes and set the training sets
@@ -273,6 +274,8 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
                 // Right child node
                 childNodes[rightNode]->getTrainingSet()->push_back(*tit);
             }
+            noParentNode[leftNode] = false;
+            noParentNode[rightNode] = false;
         }
     }
     
@@ -284,11 +287,20 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     
     NodeRow returnChildNodes;
     
+    
     // Decide which nodes to split further
     for (int i = 0; i < childNodeCount; i++)
     {
-        // This is a pure node, don't split it
-        returnChildNodes.push_back(childNodes[i]);
+        // Delete the nodes without parents and split the other ones
+        if (noParentNode[i])
+        {
+            delete childNodes[i];
+        }
+        else
+        {
+            // This is a pure node, don't split it
+            returnChildNodes.push_back(childNodes[i]);
+        }
     }
 
     return returnChildNodes;
@@ -694,7 +706,7 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
         
         DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(this, sampledSet);
         jungle->getDAGs().insert(trainer->train());
-            DEC_DEBUG
+
         delete trainer;
         std::cout << "DAG completed\n";
         std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
