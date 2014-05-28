@@ -242,6 +242,8 @@ namespace decision_jungle {
         static AbstractCLIFunction::RegisterFunction<HelpCLIFunction> reg;
         
     public:
+        virtual ~HelpCLIFunction() {}
+        
         /**
          * Executes the command/function
          */
@@ -284,6 +286,8 @@ namespace decision_jungle {
         static AbstractCLIFunction::RegisterFunction<ClassifyCLIFunction> reg;
         
     public:
+        virtual ~ClassifyCLIFunction() {}
+        
         /**
          * Executes the command/function
          */
@@ -351,6 +355,7 @@ namespace decision_jungle {
         static AbstractCLIFunction::RegisterFunction<VersionCLIFunction> reg;
         
     public:
+        virtual ~VersionCLIFunction() {}
         /**
          * Executes the command/function
          */

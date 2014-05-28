@@ -33,7 +33,6 @@ namespace decision_jungle {
     typedef std::vector< std::vector<double> > Matrix;
     typedef std::vector< TrainingDAGNode* > NodeRow;
     
-    
     /**
      * A training example consists of a data point and a class label
      */
@@ -116,6 +115,7 @@ namespace decision_jungle {
              */
             static TrainingExample::ptr create(DataPoint::ptr _dataPoint, const ClassLabel _classLabel)
             {
+                INC_DEBUG
                 TrainingExample::ptr result = new TrainingExample(_dataPoint, _classLabel);
                 return result;
             }
@@ -160,6 +160,7 @@ namespace decision_jungle {
         {
             for (TrainingSet::iterator it = _trainingSet->begin(); it != _trainingSet->end(); ++it)
             {
+            DEC_DEBUG
                 delete *it;
             }
             _trainingSet->erase(_trainingSet->begin(), _trainingSet->end());
@@ -175,6 +176,7 @@ namespace decision_jungle {
              */
             static TrainingSet::ptr create() 
             {
+                INC_DEBUG
                 TrainingSet::ptr result(new self());
                 return result;
             }
@@ -223,16 +225,6 @@ namespace decision_jungle {
         ClassHistogram::ptr rightHistogram;
         
         /**
-         * The number of data samples in the left child node
-         */
-        int leftDataCount;
-        
-        /**
-         * The number of data samples in the right child node
-         */
-        int rightDataCount;
-        
-        /**
          * Temporary left node assignment. Used during training
          */
         int tempLeft;
@@ -256,27 +248,6 @@ namespace decision_jungle {
         typedef TrainingDAGNode self;
         typedef self* ptr;
         
-        void dump()
-        {
-            printf("this: %p ", this);
-            printf("training set: %d ", static_cast<int>(trainingSet->size()));
-            printf("left hist: ");
-            int c = 0;
-            for (ClassHistogram::iterator it = leftHistogram->begin(); it != leftHistogram->end(); ++it)
-            {
-                printf("%d : %d ", c++, *it);
-            }
-            printf(" ");
-            printf("right hist: ");
-            c = 0;
-            for (ClassHistogram::iterator it = rightHistogram->begin(); it != rightHistogram->end(); ++it)
-            {
-                printf("%d : %d ", c++, *it);
-            }
-            printf("\n");
-            std::cout.flush();
-        }
-        
         /**
          * Computes the left and right histograms
          */
@@ -298,10 +269,9 @@ namespace decision_jungle {
          */
         TrainingDAGNode(const TrainingDAGNode& other) : 
                 trainingSet(other.trainingSet), 
+                // FIXME: The histograms should be copied
                 leftHistogram(other.leftHistogram), 
                 rightHistogram(other.rightHistogram), 
-                leftDataCount(other.leftDataCount), 
-                rightDataCount(other.rightDataCount), 
                 tempLeft(other.tempLeft), 
                 tempRight(other.tempRight),
                 pure(false) {}
@@ -315,10 +285,9 @@ namespace decision_jungle {
             if (this != &other)
             {
                 trainingSet = other.trainingSet;
+                // FIXME: The histograms should be copied
                 leftHistogram = other.leftHistogram;
                 rightHistogram = other.rightHistogram;
-                leftDataCount = other.leftDataCount;
-                rightDataCount = other.rightDataCount;
                 tempLeft = other.tempLeft;
                 tempRight = other.tempRight;
             }
@@ -331,6 +300,8 @@ namespace decision_jungle {
          */
         virtual ~TrainingDAGNode()
         {
+            DEC_DEBUG
+            DEC_DEBUG
             delete rightHistogram;
             delete leftHistogram;
         }
@@ -368,26 +339,6 @@ namespace decision_jungle {
         ClassHistogram::ptr getRightHistogram()
         {
             return rightHistogram;
-        }
-        
-        /**
-         * Returns the left data count
-         * 
-         * @return left data count
-         */
-        int getLeftDataCount()
-        {
-            return leftDataCount;
-        }
-        
-        /**
-         * Returns the right data count
-         * 
-         * @return right data count
-         */
-        int getRightDataCount()
-        {
-            return rightDataCount;
         }
         
         /**
@@ -446,7 +397,7 @@ namespace decision_jungle {
          * @param error An error function to measure the entropy of the current setting
          * @return true if the threshold was changed.
          */
-        bool findThreshold(AbstractErrorFunctionPtr error);
+        bool findThreshold(NodeRow &parentNodes);
         
         /**
          * Finds an optimal child node assignment based on the given error measure
@@ -781,6 +732,8 @@ namespace decision_jungle {
         typedef DAGTrainer self;
         typedef self* ptr;
         
+        virtual ~DAGTrainer() {}
+        
         /**
          * Returns the feature dimension
          * 
@@ -831,6 +784,7 @@ namespace decision_jungle {
              */
             static DAGTrainer::ptr createForTraingSet(TrainingSet::ptr _trainingSet)
             {
+                INC_DEBUG
                 DAGTrainer::ptr trainer = new DAGTrainer();
                 trainer->trainingSet = _trainingSet;
                 
@@ -869,6 +823,8 @@ namespace decision_jungle {
         
         typedef JungleTrainer self;
         typedef self* ptr;
+        
+        virtual ~JungleTrainer() {}
         
         /**
          * Sets the number of training samples per DAG
@@ -939,6 +895,7 @@ namespace decision_jungle {
              */
             static JungleTrainer::ptr create()
             {
+                INC_DEBUG
                 JungleTrainer::ptr trainer(new JungleTrainer());
                 
                 // Initialize the trainer with the default parameters
@@ -1034,11 +991,6 @@ namespace decision_jungle {
             static double log2 = std::log(2.);
             
             return std::log(x)/log2;
-            
-            union { double f; uint32_t i; } vx = { x };
-            union { uint32_t i; double f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-            double y = double(vx.i); y *= 1.1920928955078125e-7f;
-            return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
         }
         
         /**
@@ -1047,23 +999,19 @@ namespace decision_jungle {
          * @param histogram The histogram
          * @return The calculated entropy
          */
-        double entropy(ClassHistogram::ptr histogram) const
+        double entropy(const ClassHistogram::ptr histogram) const
         {
             int classCount = histogram->size();
 
             double entropy = 0.;
 
             // Get the total number of elements in the histogram
-            double sum = 0;
-            for (int i = 0; i < classCount; i++)
-            {
-                sum += histogram->at(i);
-            }
+            double sum = histogram->getMass();
 
             for (int i = 0; i < classCount; i++)
             {
                 // Empty bins do not contribute anything
-                if ((*histogram)[i] > 0 && sum > 0)
+                if (histogram->at(i) > 0 && sum > 0)
                 {
                     entropy += histogram->at(i)/sum * flog2(histogram->at(i)/sum);
                 }
@@ -1072,34 +1020,6 @@ namespace decision_jungle {
             return entropy;
         }
         
-        /**
-         * Calculates the entropy of an array histogram
-         * 
-         * @param histogram The array histogram
-         * @param classCount The number of classes
-         */
-        double entropy(const int* histogram, int classCount) const
-        {
-            double entropy = 0.;
-
-            // Get the total number of elements in the histogram
-            double sum = 0;
-            for (int i = 0; i < classCount; i++)
-            {
-                sum += histogram[i];
-            }
-
-            for (int i = 0; i < classCount; i++)
-            {
-                // Empty bins do not contribute anything
-                if (histogram[i] > 0 && sum > 0)
-                {
-                    entropy += histogram[i]/sum * flog2(histogram[i]/sum);
-                }
-            }
-
-            return entropy;
-        }
     public:
         virtual ~AbstractEntropyErrorFunction() {}
         /**
@@ -1197,7 +1117,7 @@ namespace decision_jungle {
             {
                 dataCount += static_cast<int>((*it)->getTrainingSet()->size());
             }
-            //printf("parent count: %d\n", dataCount);
+            
             for (NodeRow::iterator it = row->begin(); it != row->end(); ++it)
             {
                  result += static_cast<double>( (*it)->getTrainingSet()->size())/static_cast<double>(dataCount) * entropy((*it)->getClassHistogram());
@@ -1264,19 +1184,13 @@ namespace decision_jungle {
             int classCount = (*row->begin())->getClassHistogram()->size();
             
             // We build up a histogram for every (virtual) child node
-            int* histograms = new int[childNodeCount * classCount];
+                INC_DEBUG
+            ClassHistogram::ptr histograms = new ClassHistogram[childNodeCount];
+            
             // Initialize the histograms
-            for (int i = 0; i < childNodeCount * classCount; i++)
-            {
-                histograms[i] = 0;
-            }
-
-            // We store the data count for each (virtual) child node here
-            int* dataCounts = new int[childNodeCount];
-            // Initialize the array
             for (int i = 0; i < childNodeCount; i++)
             {
-                dataCounts[i] = 0;
+                histograms[i].resize(classCount);
             }
 
             // We store the total data count in order to calculate the weighted entropy correctly
@@ -1293,24 +1207,21 @@ namespace decision_jungle {
                 // Add the values to the histogram
                 for (int i = 0; i < classCount; i++)
                 {
-                    histograms[leftNode * classCount + i] += (*leftHistogram)[i];
-                    histograms[rightNode * classCount + i] += (*rightHistogram)[i];
+                    histograms[leftNode].add(i, leftHistogram->get(i));
+                    histograms[rightNode].add(i, rightHistogram->get(i));
                 }
 
-                dataCounts[leftNode] += (*it)->getLeftDataCount();
-                dataCounts[rightNode] += (*it)->getRightDataCount();
-
-                dataCount += (*it)->getLeftDataCount() + (*it)->getRightDataCount();
+                dataCount += leftHistogram->getMass() + rightHistogram->getMass();
             }
 
             // Calculate the entropy based on the built up histograms
             for (int i = 0; i < childNodeCount; i++)
             {
-                result += dataCounts[i]/static_cast<double>(dataCount) * entropy(histograms + i*classCount, classCount);
+                result += histograms[i].getMass()/static_cast<double>(dataCount) * entropy(&histograms[i]);
             }
 
+            DEC_DEBUG
             delete[] histograms;
-            delete[] dataCounts;
 
             return result;
         }
@@ -1333,18 +1244,16 @@ namespace decision_jungle {
         /**
          * The left histogram base
          */
-        int* leftHistogram;
+        ClassHistogram::ptr leftHistogram;
         /**
          * The left histogram base
          */
-        int* rightHistogram;
+        ClassHistogram::ptr rightHistogram;
         /**
          * Left/right data count
          */
-        int leftDataCount;
-        int rightDataCount;
-        int* cleftHistogram;
-        int* crightHistogram;
+        ClassHistogram::ptr cleftHistogram;
+        ClassHistogram::ptr crightHistogram;
         
     public:
         /**
@@ -1377,10 +1286,14 @@ namespace decision_jungle {
          * Destructor
          */
         virtual ~ThresholdEntropyErrorFunction() {
-            delete[] leftHistogram;
-            delete[] rightHistogram;
-            delete[] cleftHistogram;
-            delete[] crightHistogram;
+            DEC_DEBUG
+            DEC_DEBUG
+            DEC_DEBUG
+            DEC_DEBUG
+            delete leftHistogram;
+            delete rightHistogram;
+            delete cleftHistogram;
+            delete crightHistogram;
         }
         
         /**
@@ -1389,9 +1302,40 @@ namespace decision_jungle {
         void initHistograms();
         
         /**
+         * Resets the current left and right histograms
+         */
+        void resetHistograms()
+        {
+            // Initialize the histograms
+            for (int i = 0; i < leftHistogram->size(); i++)
+            {
+                cleftHistogram->set(i, leftHistogram->at(i));
+                crightHistogram->set(i, rightHistogram->at(i) + parent->getClassHistogram()->at(i));
+            }
+        }
+        
+        /**
+         * Moves one training example from the right to the left histogram
+         */
+        void move(int classLabel)
+        {
+            cleftHistogram->add(classLabel, 1);
+            crightHistogram->sub(classLabel, 1);
+        }
+        
+        /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        double error() const;
+        double error() const
+        {
+            double result = 0.;
+            
+            double dataCount = cleftHistogram->getMass() + crightHistogram->getMass();
+            result = cleftHistogram->getMass()/dataCount * entropy(cleftHistogram);
+            result += crightHistogram->getMass()/dataCount * entropy(crightHistogram);
+
+            return result;
+        }
     };
 
     
@@ -1412,8 +1356,7 @@ namespace decision_jungle {
         /**
          * All child node histograms and data counts
          */
-        int* histograms;
-        int* dataCounts;
+        ClassHistogram::ptr histograms;
         double* entropies;
         int dataCount;
         
@@ -1454,8 +1397,9 @@ namespace decision_jungle {
          * Destructor
          */
         virtual ~AssignmentEntropyErrorFunction() {
+            DEC_DEBUG
+                    DEC_DEBUG
             delete[] histograms;
-            delete[] dataCounts;
             delete[] entropies;
         }
         
@@ -1562,13 +1506,13 @@ namespace decision_jungle {
             // Initialize the histogram
             for (ClassHistogram::iterator i = _hist->begin(); i != _hist->end(); ++i)
             {
-                (*i) = 0;
+                _hist->set(i, 0);
             }
             
             // Compute the histogram
             for (TrainingSet::iterator i = _trainingSet->begin(); i != _trainingSet->end(); ++i)
             {
-                (*_hist)[(*i)->getClassLabel()]++;
+                _hist->add((*i)->getClassLabel(), 1);
             }
         }
         
@@ -1587,10 +1531,10 @@ namespace decision_jungle {
             // Initialize the histogram
             for (int i = 0; i < classCount; i++)
             {
-                if ((*_hist)[i] > bestScore)
+                if (_hist->at(i) > bestScore)
                 {
                     bestClassLabel = i;
-                    bestScore = (*_hist)[i];
+                    bestScore = _hist->at(i);
                 }
             }
             
@@ -1610,9 +1554,9 @@ namespace decision_jungle {
             // Initialize the histogram
             for (ClassHistogram::iterator i = _hist->begin(); i != _hist->end(); ++i)
             {
-                if ((*i) > bestScore)
+                if (_hist->at(i) > bestScore)
                 {
-                    bestScore = *i;
+                    bestScore = _hist->at(i);
                 }
             }
             
@@ -1644,7 +1588,7 @@ namespace decision_jungle {
             // Initialize the histogram
             for (ClassHistogram::iterator i = _hist->begin(); i != _hist->end(); ++i)
             {
-                if ((*i) > _threshold)
+                if (_hist->at(i) > _threshold)
                 {
                     // If this is the first peak, there is no problem
                     if (!foundPeak)
@@ -1702,6 +1646,7 @@ namespace decision_jungle {
              */
             static TrainingStatistics::ptr create() 
             {
+                INC_DEBUG
                 return TrainingStatistics::ptr(new self());
             }
         };

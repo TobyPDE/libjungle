@@ -17,14 +17,9 @@ PredictionResult::ptr DAGNode::predict(DataPoint::ptr featureVector) const
         // Nope, return the class label
         
         // Compute the relative confidence
-        int dataCount = 0;
-        for (ClassHistogram::iterator it = getClassHistogram()->begin(); it != getClassHistogram()->end(); ++it)
+        if (classHistogram->getMass() > 0)
         {
-            dataCount += *it;
-        }
-        if (dataCount > 0)
-        {
-            return PredictionResult::Factory::create(getClassLabel(), getClassHistogram()->at(getClassLabel())/static_cast<double>(dataCount));
+            return PredictionResult::Factory::create(getClassLabel(), getClassHistogram()->at(getClassLabel())/classHistogram->getMass());
         }
         else
         {
@@ -78,31 +73,6 @@ PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
     }
     
     return PredictionResult::Factory::create(bestLabel);
-}
-
-ClassHistogram::ptr Statistics::predictionHistogram(Jungle::ptr _jungle, DataSet::ptr _dataSet)
-{
-    ClassHistogram::ptr histogram = ClassHistogram::Factory::createEmpty(0);
-    
-    for (DataSet::iterator it = _dataSet->begin(); it != _dataSet->end(); ++it)
-    {
-        // Predict the class label
-        ClassLabel label = _jungle->predict(*it)->getClassLabel();
-        
-        // Did we encounter the class label before?
-        if (histogram->size() < label)
-        {
-            // Yes
-            (*histogram)[label] = (*histogram)[label] + 1;
-        }
-        else
-        {
-            // No
-            (*histogram)[label] = 1;
-        }
-    }
-    
-    return histogram;
 }
 
 DataPoint::ptr DataPoint::Factory::createFromFileRow(const std::vector<std::string> & _row)

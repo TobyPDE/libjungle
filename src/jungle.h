@@ -17,6 +17,9 @@
 
 namespace decision_jungle
 {
+    extern int __debugCounter;
+    extern int __debugCount;
+    
     /**
      * This exception is thrown when something unexpected happens during execution. 
      */
@@ -66,7 +69,7 @@ namespace decision_jungle
                 {
                     throw RuntimeException("Invalid vector dimension.");
                 }
-                
+                INC_DEBUG
                 ptr featureVector = new self(_dim);
                 
                 // Initialize the vector
@@ -109,6 +112,7 @@ namespace decision_jungle
              */
             static DataSet::ptr create() 
             {
+                INC_DEBUG
                 DataSet::ptr result (new self());
                 return result;
             }
@@ -128,11 +132,134 @@ namespace decision_jungle
      * A histogram over the class labels
      */
     class ClassHistogram {
+    private:
+        /**
+         * The number of classes in this histogram
+         */
+        int classCount;
+        /**
+         * The actual histogram
+         */
+        int* histogram;
+        /**
+         * The integral over the entire histogram
+         */
+        int mass;
+        /**
+         * The entropy of the histogram
+         */
+        double entropy;
+        
     public:
         typedef int value;
-        typedef std::vector<value> self;
-        typedef self::iterator iterator;
+        typedef ClassHistogram self;
+        typedef int iterator;
         typedef self* ptr;
+        
+        /**
+         * Default constructor
+         */
+        ClassHistogram() : classCount(0), histogram(0), mass(0), entropy(0) { }
+        ClassHistogram(int _classCount) : classCount(_classCount), histogram(0), mass(0), entropy(0) { resize(_classCount); }
+        
+        /**
+         * Copy constructor
+         */
+        ClassHistogram(const ClassHistogram & other) 
+        {
+            resize (other.classCount);
+            for (int i = 0; i < classCount; i++)
+            {
+                set(i, other.at(i));
+            }
+            mass = other.mass;
+            entropy = other.entropy;
+        }
+        
+        /**
+         * Assignment operator
+         */
+        ClassHistogram & operator= (const ClassHistogram &other)
+        {
+            // Prevent self assignment
+            if (this != &other)
+            {
+                resize (other.classCount);
+                for (int i = 0; i < classCount; i++)
+                {
+                    set(i, other.at(i));
+                }
+                mass = other.mass;
+                entropy = other.entropy;
+            }
+            return *this;
+        }
+        
+        /**
+         * Destructor
+         */
+        ~ClassHistogram()
+        {
+            if (histogram != 0)
+            {
+                DEC_DEBUG
+                delete[] histogram;
+            }
+        }
+        
+        /**
+         * Resizes the histogram to a certain size
+         */
+        void resize(int _classCount)
+        {
+            // Release the current histogram
+            if (histogram != 0)
+            {
+                DEC_DEBUG
+                delete[] histogram;
+                histogram = 0;
+            }
+            
+            // Only allocate a new histogram, if there is more than one class
+            if (_classCount > 0)
+            {
+                INC_DEBUG
+                histogram = new int[_classCount];
+                classCount = _classCount;
+                
+                // Initialize the histogram
+                for (int i = 0; i < classCount; i++)
+                {
+                    histogram[i] = 0;
+                }
+            }
+        }
+        
+        /**
+         * Returns the size of the histogram (= class count)
+         */
+        int size() { return classCount; }
+        
+        /**
+         * Returns the value of the histogram at a certain position. Caution: For performance reasons, we don't
+         * perform any parameter check!
+         */
+        int at(int i) const { return histogram[i]; }
+        int get(int i) const { return histogram[i]; }
+        void set(int i, int v) { mass -= histogram[i]; mass += v; histogram[i] = v; }
+        void add(int i, int v) { mass += v; histogram[i] += v; }
+        void sub(int i, int v) { mass -= v; histogram[i] -= v; }
+        
+        /**
+         * Returns the mass
+         */
+        double getMass() { return mass; } const
+        
+        /**
+         * Iterator interface from STL
+         */
+        int begin() { return 0; } 
+        int end() { return classCount; }
         
         /**
          * A Factory for class histograms
@@ -147,14 +274,8 @@ namespace decision_jungle
              */
             static ClassHistogram::ptr createEmpty(int bins) 
             {
+                INC_DEBUG
                 ClassHistogram::ptr histogram = new ClassHistogram::self(bins);
-
-                // Initialize all bins with zero
-                for (int i = 0; i < bins; i++)
-                {
-                    (*histogram)[i] = 0;
-                }
-
                 return histogram;
             }
             
@@ -166,6 +287,7 @@ namespace decision_jungle
              */
             static ClassHistogram::ptr clone(ClassHistogram::ptr _hist)
             {
+                INC_DEBUG
                 ClassHistogram::ptr histogram(new ClassHistogram::self(*_hist));
                 return histogram;
             }
@@ -254,6 +376,7 @@ namespace decision_jungle
              */
             static PredictionResult::ptr create(const ClassLabel _classLabel, const double _confidence)
             {
+                INC_DEBUG
                 PredictionResult::ptr result (new PredictionResult::self(_classLabel, _confidence));
                 return result;
             }
@@ -266,6 +389,7 @@ namespace decision_jungle
              */
             static PredictionResult::ptr create(const ClassLabel _classLabel)
             {
+                INC_DEBUG
                 PredictionResult::ptr result (new PredictionResult::self(_classLabel, 0));
                 return result;
             }
@@ -319,6 +443,7 @@ namespace decision_jungle
     public:
         virtual ~DAGNode()
         {
+            DEC_DEBUG
             delete classHistogram;
         }
         
@@ -327,7 +452,6 @@ namespace decision_jungle
          */
         static void deleteDAG(DAGNode::ptr root)
         {
-			return;
             // Put all nodes into a set and then iterate over the set to delete all nodes
             std::vector<DAGNode::ptr> queue;
             std::set<DAGNode::ptr> deletionSet;
@@ -351,6 +475,7 @@ namespace decision_jungle
             
             for (std::set<DAGNode::ptr>::iterator it = deletionSet.begin(); it != deletionSet.end(); ++it)
             {
+            DEC_DEBUG
                 delete *it;
             }
         }
@@ -506,14 +631,14 @@ namespace decision_jungle
             /**
              * Initializes a note
              */
-            static void init(DAGNode::ptr node)
+            static void init(DAGNode::ptr node, int classCount)
             {
                 node->setFeatureID(0);
                 node->setThreshold(0);
                 node->setClassLabel(0);
                 node->setLeft(0);
                 node->setRight(0);
-                node->setClassHistogram(ClassHistogram::Factory::createEmpty(0));
+                node->setClassHistogram(ClassHistogram::Factory::createEmpty(classCount));
             }
             
         public:
@@ -522,12 +647,13 @@ namespace decision_jungle
              * 
              * @return initialized DAG node
              */
-            static DAGNode::ptr create()
+            static DAGNode::ptr create(int classCount)
             {
+                INC_DEBUG
                 DAGNode::ptr node = new DAGNode();
 
                 // Initialize the node
-                Factory::init(node);
+                Factory::init(node, classCount);
                 
                 return node;
             }
@@ -556,7 +682,7 @@ namespace decision_jungle
                 DAGNode::deleteDAG(*it);
             }
         }
-        
+
         /**
          * Returns the trained DAGs
          * 
@@ -586,6 +712,7 @@ namespace decision_jungle
              */
             static Jungle::ptr create()
             {
+                INC_DEBUG
                 return Jungle::ptr(new Jungle);
             }
         };
@@ -600,15 +727,6 @@ namespace decision_jungle
         typedef std::shared_ptr<self> ptr;
         
         /**
-         * Calculates a histogram of predicted class labels for a data set
-         * 
-         * @param _jungle the learned jungle
-         * @param _dataSet The dataset to classify
-         * @return A class histogram
-         */
-        ClassHistogram::ptr predictionHistogram(Jungle::ptr _jungle, DataSet::ptr _dataSet);
-        
-        /**
          * A factory for this class
          */
         class Factory {
@@ -620,6 +738,7 @@ namespace decision_jungle
              */
             static Statistics::ptr create() 
             {
+                INC_DEBUG
                 return Statistics::ptr(new self());
             }
         };
@@ -751,6 +870,7 @@ namespace decision_jungle
              */
             static ProgressBar::ptr create(int _width, int _total)
             {
+                INC_DEBUG
                 return ptr(new self(_width, _total));
             }
             
