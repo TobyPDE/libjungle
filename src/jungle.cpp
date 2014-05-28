@@ -17,9 +17,9 @@ PredictionResult::ptr DAGNode::predict(DataPoint::ptr featureVector) const
         // Nope, return the class label
         
         // Compute the relative confidence
-        if (classHistogram->getMass() > 0)
+        if (classHistogram.getMass() > 0)
         {
-            return PredictionResult::Factory::create(getClassLabel(), getClassHistogram()->at(getClassLabel())/classHistogram->getMass());
+            return PredictionResult::Factory::create(getClassLabel(), classHistogram.at(getClassLabel())/classHistogram.getMass());
         }
         else
         {
@@ -88,7 +88,6 @@ DataPoint::ptr DataPoint::Factory::createFromFileRow(const std::vector<std::stri
     
     return dataPoint;
 }
-
 
 DataSet::ptr DataSet::Factory::createFromFile(const std::string & _fileName, bool _verboseMode)
 {

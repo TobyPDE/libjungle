@@ -136,44 +136,47 @@ namespace decision_jungle
         /**
          * The number of classes in this histogram
          */
-        int classCount;
+        int bins;
+        
         /**
          * The actual histogram
          */
         int* histogram;
+        
         /**
          * The integral over the entire histogram
          */
         int mass;
+        
         /**
-         * The entropy of the histogram
+         * Logarithm to base 2
+         * 
+         * @param x
+         * @return log_2(x)
          */
-        double entropy;
+        double log2(double x) const
+        {
+            return std::log(x)/std::log(2);
+        }
         
     public:
-        typedef int value;
-        typedef ClassHistogram self;
-        typedef int iterator;
-        typedef self* ptr;
-        
         /**
          * Default constructor
          */
-        ClassHistogram() : classCount(0), histogram(0), mass(0), entropy(0) { }
-        ClassHistogram(int _classCount) : classCount(_classCount), histogram(0), mass(0), entropy(0) { resize(_classCount); }
+        ClassHistogram() : bins(0), histogram(0), mass(0) { }
+        ClassHistogram(int _classCount) : bins(_classCount), histogram(0), mass(0){ resize(_classCount); }
         
         /**
          * Copy constructor
          */
         ClassHistogram(const ClassHistogram & other) 
         {
-            resize (other.classCount);
-            for (int i = 0; i < classCount; i++)
+            resize (other.bins);
+            for (int i = 0; i < bins; i++)
             {
                 set(i, other.at(i));
             }
             mass = other.mass;
-            entropy = other.entropy;
         }
         
         /**
@@ -184,13 +187,12 @@ namespace decision_jungle
             // Prevent self assignment
             if (this != &other)
             {
-                resize (other.classCount);
-                for (int i = 0; i < classCount; i++)
+                resize (other.bins);
+                for (int i = 0; i < bins; i++)
                 {
                     set(i, other.at(i));
                 }
                 mass = other.mass;
-                entropy = other.entropy;
             }
             return *this;
         }
@@ -202,7 +204,6 @@ namespace decision_jungle
         {
             if (histogram != 0)
             {
-                DEC_DEBUG
                 delete[] histogram;
             }
         }
@@ -215,7 +216,6 @@ namespace decision_jungle
             // Release the current histogram
             if (histogram != 0)
             {
-                DEC_DEBUG
                 delete[] histogram;
                 histogram = 0;
             }
@@ -223,12 +223,11 @@ namespace decision_jungle
             // Only allocate a new histogram, if there is more than one class
             if (_classCount > 0)
             {
-                INC_DEBUG
                 histogram = new int[_classCount];
-                classCount = _classCount;
+                bins = _classCount;
                 
                 // Initialize the histogram
-                for (int i = 0; i < classCount; i++)
+                for (int i = 0; i < bins; i++)
                 {
                     histogram[i] = 0;
                 }
@@ -238,7 +237,7 @@ namespace decision_jungle
         /**
          * Returns the size of the histogram (= class count)
          */
-        int size() { return classCount; }
+        int size() const { return bins; }
         
         /**
          * Returns the value of the histogram at a certain position. Caution: For performance reasons, we don't
@@ -249,49 +248,60 @@ namespace decision_jungle
         void set(int i, int v) { mass -= histogram[i]; mass += v; histogram[i] = v; }
         void add(int i, int v) { mass += v; histogram[i] += v; }
         void sub(int i, int v) { mass -= v; histogram[i] -= v; }
+        void addOne(int i) { mass++; histogram[i]++; }
+        void subOne(int i) { mass--; histogram[i]--; }
         
         /**
          * Returns the mass
          */
-        double getMass() { return mass; } const
+        double getMass() const { return mass; }
         
         /**
          * Iterator interface from STL
          */
-        int begin() { return 0; } 
-        int end() { return classCount; }
+        int begin() const { return 0; } 
+        int end() const { return bins; }
         
         /**
-         * A Factory for class histograms
+         * Calculates the entropy of a histogram
+         * 
+         * @return The calculated entropy
          */
-        class Factory {
-        public:
-            /**
-             * Creates a new initialized class histogram with a fixed number of bins
-             * 
-             * @param bins The number of histogram bins
-             * @return pointer to the histogram
-             */
-            static ClassHistogram::ptr createEmpty(int bins) 
-            {
-                INC_DEBUG
-                ClassHistogram::ptr histogram = new ClassHistogram::self(bins);
-                return histogram;
-            }
+        double entropy() const
+        {
+            if (mass == 0) return 0;
             
-            /**
-             * Clones a histogram
-             * 
-             * @param _hist The histogram to clone
-             * @return cloned histogram
-             */
-            static ClassHistogram::ptr clone(ClassHistogram::ptr _hist)
+            double entropy = 0;
+            
+            // Get the total number of elements in the histogram
+            double sum = getMass();
+
+            for (int i = 0; i < bins; i++)
             {
-                INC_DEBUG
-                ClassHistogram::ptr histogram(new ClassHistogram::self(*_hist));
-                return histogram;
+                // Empty bins do not contribute anything
+                if (at(i) > 0 && sum > 0)
+                {
+                    entropy += at(i)/sum * log2(at(i)/sum);
+                }
             }
-        };
+
+            return entropy;
+        }
+        
+        /**
+         * Sets all entries in the histogram to 0
+         */
+        void reset()
+        {
+            // Only reset the histogram if there are more than 0 bins
+            if (histogram == 0) return;
+            
+            for (int i = 0; i < bins; i++)
+            {
+                histogram[i] = 0;
+            }
+            mass = 0;
+        }
     };
     
     /**
@@ -433,7 +443,7 @@ namespace decision_jungle
         /**
          * Class histogram for this node
          */
-        ClassHistogram::ptr classHistogram;
+        ClassHistogram classHistogram;
         
         /**
          * Initializes all parameters
@@ -441,11 +451,7 @@ namespace decision_jungle
         void initParameters();
         
     public:
-        virtual ~DAGNode()
-        {
-            DEC_DEBUG
-            delete classHistogram;
-        }
+        virtual ~DAGNode() {}
         
         /**
          * Deletes a DAG given by its root node
@@ -458,11 +464,14 @@ namespace decision_jungle
             
             // Start with the root node
             queue.push_back(root);
+            DAGNode::ptr current = 0;
             
             while (queue.size() > 0)
             {
-                DAGNode::ptr current = queue.back();
+                current = queue.back();
                 queue.pop_back();
+                
+                if (deletionSet.find(current) != deletionSet.end()) continue;
                 
                 deletionSet.insert(current);
                 
@@ -475,7 +484,6 @@ namespace decision_jungle
             
             for (std::set<DAGNode::ptr>::iterator it = deletionSet.begin(); it != deletionSet.end(); ++it)
             {
-            DEC_DEBUG
                 delete *it;
             }
         }
@@ -571,16 +579,6 @@ namespace decision_jungle
         }
         
         /**
-         * Sets the class histogram
-         * 
-         * @param _classHistogram The class histogram
-         */
-        void setClassHistogram(ClassHistogram::ptr _classHistogram)
-        {
-            classHistogram = _classHistogram;
-        }
-        
-        /**
          * Classifies a new data point given by a feature vector
          * 
          * @return Classification result (class label and confidence)
@@ -602,9 +600,19 @@ namespace decision_jungle
          * 
          * @return Class histogram
          */
-        ClassHistogram::ptr getClassHistogram() const
+        ClassHistogram* getClassHistogram()
         {
-            return classHistogram;
+            return &classHistogram;
+        }
+        
+        /**
+         * Returns the class histogram
+         * 
+         * @return Class histogram
+         */
+        const ClassHistogram* getClassHistogram() const
+        {
+            return &classHistogram;
         }
     
         /**
@@ -638,7 +646,6 @@ namespace decision_jungle
                 node->setClassLabel(0);
                 node->setLeft(0);
                 node->setRight(0);
-                node->setClassHistogram(ClassHistogram::Factory::createEmpty(classCount));
             }
             
         public:

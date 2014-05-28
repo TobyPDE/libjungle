@@ -8,4 +8,4 @@ configure_file (
   "${PROJECT_SOURCE_DIR}/src/config.h"
 )
 target_link_libraries( lib_jungle ${Boost_LIBRARIES} )
-add_definitions ( -std=c++0x -O3 )
+add_definitions ( -std=c++0x -O3 -g )
