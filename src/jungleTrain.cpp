@@ -231,8 +231,8 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     // Get the entropy of the parent row in order to determine whether or not the split shall be performed
     RowEntropyErrorFunction parentErrorFunction(parentNodes);
     ChildRowEntropyErrorFunction childErrorFunction(parentNodes, childNodeCount);
-    double parentEntropy = parentErrorFunction.error();
-    double childEntroy = childErrorFunction.error();
+    float parentEntropy = parentErrorFunction.error();
+    float childEntroy = childErrorFunction.error();
     // Do not perform the split if it increases the energy
     if (std::abs(parentEntropy) - std::abs(childEntroy) <= 1e-6)
     {
@@ -351,11 +351,11 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
     // We need to save the current settings in order to restore them after optimization because we modify the object
     // in order to evaluate the error function
     int bestFeatureID = getFeatureID();
-    double bestThreshold = getThreshold();
+    float bestThreshold = getThreshold();
     
     // Compute the current error in order to find a better threshold
-    double bestEntropy = error.error();
-    double currentEntropy = 0;
+    float bestEntropy = error.error();
+    float currentEntropy = 0;
     
     // Return flag to notify the calling optimizer whether or not we changed the threshold
     bool changed = false;
@@ -420,8 +420,8 @@ bool TrainingDAGNode::findLeftChildNodeAssignment(NodeRow & parentNodes, int chi
     // Save the currently best settings
     int selectedLeft = tempLeft;
     
-    double bestEntropy = error.error();
-    double currentEntropy = 0;
+    float bestEntropy = error.error();
+    float currentEntropy = 0;
     bool changed = false;
     
     // Test all possible assignments
@@ -461,8 +461,8 @@ bool TrainingDAGNode::findRightChildNodeAssignment(NodeRow & parentNodes, int ch
     // Save the currently best settings
     int selectedRight = tempRight;
     
-    double bestEntropy = error.error();
-    double currentEntropy = 0;
+    float bestEntropy = error.error();
+    float currentEntropy = 0;
     bool changed = false;
     
     // Test all possible assignments
@@ -503,8 +503,8 @@ bool TrainingDAGNode::findCoherentChildNodeAssignment(NodeRow & parentNodes, int
     int selectedRight = tempRight;
     int selectedLeft = tempLeft;
     
-    double bestEntropy = error.error();
-    double currentEntropy = 0;
+    float bestEntropy = error.error();
+    float currentEntropy = 0;
     bool changed = false;
     
     // Test all possible assignments
@@ -658,7 +658,7 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
     // If the number of training examples is set to -1, we determine the number automatically
     if (numTrainingSamples == -1)
     {
-        numTrainingSamples = std::min(static_cast<int>(trainingSet->size()), static_cast<int>(std::floor(trainingSet->size() * 5 / static_cast<double>(numDAGs))));
+        numTrainingSamples = std::min(static_cast<int>(trainingSet->size()), static_cast<int>(std::floor(trainingSet->size() * 5 / static_cast<float>(numDAGs))));
     }
     
     Jungle::ptr jungle = Jungle::Factory::create();
@@ -705,12 +705,12 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
     return jungle;
 }
 
-double TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet)
+float TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet)
 {
     ProgressBar::ptr progressBar = ProgressBar::Factory::create(_trainingSet->size());
    
     // Calculate the training error
-    double error = 0;
+    float error = 0;
     for (TrainingSet::iterator iter = _trainingSet->begin(); iter != _trainingSet->end(); ++iter)
     {
         if ((*iter)->getClassLabel() != _jungle->predict((*iter)->getDataPoint())->getClassLabel())
@@ -722,7 +722,7 @@ double TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _
     // Calculate the relative error
     if (_trainingSet->size()  > 0)
     {
-        error = error/static_cast<double>(_trainingSet->size());
+        error = error/static_cast<float>(_trainingSet->size());
     }
     
     return error;
@@ -820,7 +820,7 @@ void AssignmentEntropyErrorFunction::initHistograms()
     }
 
     // Calculate the entropies based on the built up histograms
-    entropies = new double[childNodeCount];
+    entropies = new float[childNodeCount];
     
     for (int i = 0; i < childNodeCount; i++)
     {
