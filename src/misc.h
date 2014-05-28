@@ -2,6 +2,11 @@
 #define	MISC_HPP
 
 #include <exception>
+#define INC_DEBUG (decision_jungle::__debugCounter++);
+#define DEC_DEBUG (decision_jungle::__debugCounter--);
+#define INC_DEBUG2 (decision_jungle::__debugCount++);
+#define DEC_DEBUG2 (decision_jungle::__debugCount--);
+
 
 /**
  * This file contains miscellaneous functions and definitions needed allover the place. 

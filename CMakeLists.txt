@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 2.8)
+project(DecisionJungle)
+set (DecisionJungle_VERSION_MAJOR 1)
+set (DecisionJungle_VERSION_MINOR 0)
+add_subdirectory ( src )
+add_executable(jungle src/cliInterface.cpp )
+target_link_libraries(jungle lib_jungle )
+add_definitions ( -std=c++0x -O3 )
