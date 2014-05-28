@@ -251,10 +251,6 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
                 _trainer->setMaxWidth(ParameterConverter::getInt(it->second));
                 break;
                 
-            case 'T':
-                _trainer->setTrainingMethod(ParameterConverter::getChar(it->second));
-                break;
-                
             case 'B':
                 _trainer->setUseBagging(ParameterConverter::getBool(it->second));
                 break;
@@ -306,7 +302,6 @@ int TrainCLIFunction::execute()
         std::cout << "numFeatureSamples " << jungleTrainer->getNumFeatureSamples() << std::endl;
         std::cout << "maxDepth " << jungleTrainer->getMaxDepth() << std::endl;
         std::cout << "maxWidth " << jungleTrainer->getMaxWidth() << std::endl;
-        std::cout << "trainingMethod " << jungleTrainer->getTrainingMethod() << std::endl;
         std::cout << "useBagging " << jungleTrainer->getUseBagging() << std::endl;
         std::cout << "maxLevelIterations " << jungleTrainer->getMaxLevelIterations() << std::endl;
         std::cout << "useStochasticThreshold " << jungleTrainer->getUseStochasticThreshold() << std::endl;
@@ -317,9 +312,9 @@ int TrainCLIFunction::execute()
     
     // Load the training set
     std::cout << "Load training set" << std::endl;
-    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), false);
+    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), true);
     std::cout << "Load test set" << std::endl;
-    testSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(1), false);
+    testSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(1), true);
     
     std::cout << std::endl;
     
@@ -362,7 +357,6 @@ const char* TrainCLIFunction::help()
             " -F [int]      The number of features that are sampled per node\n"
             " -D [int]      Maximum depth of each DAG\n"
             " -W [int]      Maximum width of each DAG\n"
-            " -T ['e', 'g'] Training method. 'e': Entropy/Information gain, 'g': Gini Index\n"
             " -B [bool]     Whether of not to use bagging. See also -N\n"
             " -I [int]      Maximum number of iterations at each level\n"
             " -t [bool]     Whether or not to use stochastic threshold selection\n"

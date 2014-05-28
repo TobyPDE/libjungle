@@ -26,10 +26,6 @@ void AbstractTrainer::validateParameters() throw(ConfigurationException)
     {
         throw ConfigurationException("max width must be greater than 0.");
     }
-    if (trainingMethod != AbstractErrorFunction::error_entropy && trainingMethod != AbstractErrorFunction::error_gini)
-    {
-        throw ConfigurationException("Unknown training method.");
-    }
 }
 
 void DAGTrainer::validateParameters() throw(ConfigurationException)
@@ -183,7 +179,6 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     bool change = false;
     int iterationCounter = 0;
     bool isTreeLevel = (static_cast<int>(parentNodes.size()) * 2 == childNodeCount);
-    AbstractErrorFunction::ptr childErrorFunction = AbstractErrorFunction::Factory::createChildRowErrorFunction(getTrainingMethod(), parentNodes, childNodeCount);
     do
     {
         change = false;
@@ -205,13 +200,11 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
         
         for (NodeRow::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
         {
-            AbstractErrorFunction::ptr assignmentError = AbstractErrorFunction::Factory::createAssignmentEntropyErrorFunction(getTrainingMethod(), parentNodes, *iter, childNodeCount);
-            
             // Pure nodes must have left=right
             if ((*iter)->isPure())
             {
                 // Find the new optimal child assignment for both pointers
-                if ((*iter)->findCoherentChildNodeAssignment(childErrorFunction, childNodeCount))
+                if ((*iter)->findCoherentChildNodeAssignment(parentNodes, childNodeCount))
                 {
                     change = true;
                 }
@@ -219,19 +212,16 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
             else
             {
                 // Find the new optimal child assignment for the left pointer
-                if ((*iter)->findRightChildNodeAssignment(childErrorFunction, childNodeCount))
+                if ((*iter)->findRightChildNodeAssignment(parentNodes, childNodeCount))
                 {
                     change = true;
                 }
                 // Find the new optimal child assignment for the right pointer
-                if ((*iter)->findLeftChildNodeAssignment(childErrorFunction, childNodeCount))
+                if ((*iter)->findLeftChildNodeAssignment(parentNodes, childNodeCount))
                 {
                     change = true;
                 }
             }
-
-            DEC_DEBUG
-            delete assignmentError;
         }
     }
     // FIXME: Set maximum iterations as config
@@ -239,14 +229,10 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
 
     // Determine whether or not the row training shall be performed
     // Get the entropy of the parent row in order to determine whether or not the split shall be performed
-    AbstractErrorFunction::ptr parentErrorFunction = AbstractErrorFunction::Factory::createRowErrorFunction(getTrainingMethod(), parentNodes);
-    double parentEntropy = parentErrorFunction->error();
-    double childEntroy = childErrorFunction->error();
-            DEC_DEBUG
-            DEC_DEBUG
-    delete childErrorFunction;
-    delete parentErrorFunction;
-    
+    RowEntropyErrorFunction parentErrorFunction(parentNodes);
+    ChildRowEntropyErrorFunction childErrorFunction(parentNodes, childNodeCount);
+    double parentEntropy = parentErrorFunction.error();
+    double childEntroy = childErrorFunction.error();
     // Do not perform the split if it increases the energy
     if (std::abs(parentEntropy) - std::abs(childEntroy) <= 1e-6)
     {
@@ -310,7 +296,6 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
 
 TrainingDAGNode::ptr TrainingDAGNode::Factory::create(DAGTrainerPtr trainer)
 {
-    INC_DEBUG
     TrainingDAGNode::ptr node = new TrainingDAGNode(trainer);
 
     // Initialize the parent parameters
@@ -324,21 +309,22 @@ TrainingDAGNode::ptr TrainingDAGNode::Factory::create(DAGTrainerPtr trainer)
     node->setClassLabel(0);
 
     // Initialize the histograms
-    node->leftHistogram = ClassHistogram::Factory::createEmpty(trainer->getClassCount());
-    node->rightHistogram = ClassHistogram::Factory::createEmpty(trainer->getClassCount());
-
+    node->getLeftHistogram()->resize(trainer->getClassCount());
+    node->getRightHistogram()->resize(trainer->getClassCount());
+    node->getClassHistogram()->resize(trainer->getClassCount());
+    
     return node;
 }
 
 void TrainingDAGNode::resetLeftRightHistogram()
 {
     // The left one becomes zero, the right one becomes the node histogram
-    ClassHistogram::ptr nodeHistogram = getClassHistogram();
+    ClassHistogram* nodeHistogram = getClassHistogram();
 
     for (int i = 0; i < trainer->getClassCount(); i++)
     {
-        leftHistogram->set(i, 0);
-        rightHistogram->set(i, nodeHistogram->at(i));
+        leftHistogram.set(i, 0);
+        rightHistogram.set(i, nodeHistogram->at(i));
     }
 }
 
@@ -346,11 +332,11 @@ void TrainingDAGNode::resetLeftRightHistogram()
 void TrainingDAGNode::updateHistogramAndLabel()
 {
     // Compute the histogram
-    TrainingUtil::computHistogram(getClassHistogram(), getTrainingSet());
+    TrainingUtil::computHistogram(*getClassHistogram(), getTrainingSet());
     // Get the best class label
-    setClassLabel(TrainingUtil::histogramArgMax(getClassHistogram()));
+    setClassLabel(TrainingUtil::histogramArgMax(*getClassHistogram()));
     
-    pure = TrainingUtil::histogramIsDirichlet(getClassHistogram());
+    pure = TrainingUtil::histogramIsDirichlet(*getClassHistogram());
 }
 
 bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
@@ -358,9 +344,9 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
     // If there are no training examples, there is nothing to train
     if (trainingSet->size() == 0) return false;
     
-    ThresholdEntropyErrorFunction* error = new ThresholdEntropyErrorFunction(&parentNodes, this); 
-    error->initHistograms();
-    error->resetHistograms();
+    ThresholdEntropyErrorFunction error(parentNodes, this); 
+    error.initHistograms();
+    error.resetHistograms();
             
     // We need to save the current settings in order to restore them after optimization because we modify the object
     // in order to evaluate the error function
@@ -368,7 +354,7 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
     double bestThreshold = getThreshold();
     
     // Compute the current error in order to find a better threshold
-    double bestEntropy = error->error();
+    double bestEntropy = error.error();
     double currentEntropy = 0;
     
     // Return flag to notify the calling optimizer whether or not we changed the threshold
@@ -388,7 +374,7 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
         std::sort(trainingSet->begin(), trainingSet->end(), compare);
         
         // Initialize the virtual left/right histograms
-        error->resetHistograms();
+        error.resetHistograms();
         
         // Test all possible splits
         for (TrainingSet::iterator it = trainingSet->begin(); it != trainingSet->end() - 1; ++it)
@@ -397,10 +383,10 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
             setThreshold( ( (*it)->getDataPoint()->at(getFeatureID()) + (*(it + 1))->getDataPoint()->at(getFeatureID()) ) / 2 );
             
             // Update the histograms
-            error->move((*it)->getClassLabel());
+            error.move((*it)->getClassLabel());
             
             // Get the current entropy
-            currentEntropy = error->error();
+            currentEntropy = error.error();
             
             // Only accept the split if the entropy decreases and the threshold is not insignificant
             if (currentEntropy > bestEntropy && ( (*(it + 1))->getDataPoint()->at(getFeatureID()) - (*it)->getDataPoint()->at(getFeatureID())) >= 1e-6)
@@ -422,15 +408,19 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
     return changed;
 }
 
-bool TrainingDAGNode::findLeftChildNodeAssignment(AbstractErrorFunction::ptr error, int childNodeCount)
+bool TrainingDAGNode::findLeftChildNodeAssignment(NodeRow & parentNodes, int childNodeCount)
 {
     // If there are no training examples, there is nothing to train
     if (trainingSet->size() == 0) return false;
     
+    // Create the error function
+    AssignmentEntropyErrorFunction error(parentNodes, this, childNodeCount);
+    error.initHistograms();
+    
     // Save the currently best settings
     int selectedLeft = tempLeft;
     
-    double bestEntropy = error->error();
+    double bestEntropy = error.error();
     double currentEntropy = 0;
     bool changed = false;
     
@@ -441,7 +431,7 @@ bool TrainingDAGNode::findLeftChildNodeAssignment(AbstractErrorFunction::ptr err
         setTempLeft(cLeft);
 
         // Get the error
-        currentEntropy = error->error();
+        currentEntropy = error.error();\
 
         // Is this better?
         if (currentEntropy > bestEntropy)
@@ -459,15 +449,19 @@ bool TrainingDAGNode::findLeftChildNodeAssignment(AbstractErrorFunction::ptr err
     return changed;
 }
 
-bool TrainingDAGNode::findRightChildNodeAssignment(AbstractErrorFunction::ptr error, int childNodeCount)
+bool TrainingDAGNode::findRightChildNodeAssignment(NodeRow & parentNodes, int childNodeCount)
 {
     // If there are no training examples, there is nothing to train
     if (trainingSet->size() == 0) return false;
     
+    // Create the error function
+    AssignmentEntropyErrorFunction error(parentNodes, this, childNodeCount);
+    error.initHistograms();
+
     // Save the currently best settings
     int selectedRight = tempRight;
     
-    double bestEntropy = error->error();
+    double bestEntropy = error.error();
     double currentEntropy = 0;
     bool changed = false;
     
@@ -478,7 +472,7 @@ bool TrainingDAGNode::findRightChildNodeAssignment(AbstractErrorFunction::ptr er
         setTempRight(cRight);
 
         // Get the error
-        currentEntropy = error->error();
+        currentEntropy = error.error();
 
         // Is this better?
         if (currentEntropy > bestEntropy)
@@ -496,16 +490,20 @@ bool TrainingDAGNode::findRightChildNodeAssignment(AbstractErrorFunction::ptr er
     return changed;
 }
 
-bool TrainingDAGNode::findCoherentChildNodeAssignment(AbstractErrorFunction::ptr error, int childNodeCount)
+bool TrainingDAGNode::findCoherentChildNodeAssignment(NodeRow & parentNodes, int childNodeCount)
 {
     // If there are no training examples, there is nothing to train
     if (trainingSet->size() == 0) return false;
+    
+    // Create the error function
+    AssignmentEntropyErrorFunction error(parentNodes, this, childNodeCount);
+    error.initHistograms();
     
     // Save the currently best settings
     int selectedRight = tempRight;
     int selectedLeft = tempLeft;
     
-    double bestEntropy = error->error();
+    double bestEntropy = error.error();
     double currentEntropy = 0;
     bool changed = false;
     
@@ -517,7 +515,7 @@ bool TrainingDAGNode::findCoherentChildNodeAssignment(AbstractErrorFunction::ptr
         setTempLeft(current);
         
         // Get the error
-        currentEntropy = error->error();
+        currentEntropy = error.error();
 
         // Is this better?
         if (currentEntropy > bestEntropy)
@@ -622,7 +620,6 @@ DAGTrainer::ptr DAGTrainer::Factory::createFromJungleTrainer(JungleTrainer::ptr 
     // Transfer all parameter
     result->setMaxDepth(_jungleTrainer->getMaxDepth());
     result->setMaxWidth(_jungleTrainer->getMaxWidth());
-    result->setTrainingMethod(_jungleTrainer->getTrainingMethod());
     result->setVerboseMode(_jungleTrainer->getVerboseMode());
     result->setNumFeatureSamples(_jungleTrainer->getNumFeatureSamples());
     result->setUseBagging(_jungleTrainer->getUseBagging());
@@ -638,7 +635,6 @@ void AbstractTrainer::Factory::init(AbstractTrainer::ptr _trainer)
 {
     _trainer->maxDepth = 256;
     _trainer->maxWidth = 128;
-    _trainer->trainingMethod = AbstractErrorFunction::error_entropy;
     _trainer->verboseMode = false;
     _trainer->useBagging = false;
     _trainer->maxLevelIterations = 55;
@@ -709,96 +705,6 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
     return jungle;
 }
 
-AbstractErrorFunction::ptr AbstractErrorFunction::Factory::createRowErrorFunction(char _criteria, NodeRow & _nodes)
-{
-    // Determine the error measure to use
-    switch (_criteria)
-    {
-        case AbstractErrorFunction::error_entropy:
-            return AbstractEntropyErrorFunction::Factory::createRowErrorFunction(_nodes);
-            break;
-
-        default:
-            throw RuntimeException("Unknown error measure.");
-            break;
-    }
-}
-
-AbstractErrorFunction::ptr AbstractErrorFunction::Factory::createChildRowErrorFunction(char _criteria, NodeRow & _nodes, int _childNodeCount)
-{
-    // Determine the error measure to use
-    switch (_criteria)
-    {
-        case AbstractErrorFunction::error_entropy:
-            return AbstractEntropyErrorFunction::Factory::createChildRowErrorFunction(_nodes, _childNodeCount);
-            break;
-
-        default:
-            throw RuntimeException("Unknown error measure.");
-            break;
-    }
-}
-
-AbstractErrorFunction::ptr AbstractErrorFunction::Factory::createThresholdEntropyErrorFunction(char _criteria, NodeRow & _nodes, TrainingDAGNode::ptr _parent)
-{
-    // Determine the error measure to use
-    switch (_criteria)
-    {
-        case AbstractErrorFunction::error_entropy:
-            return AbstractEntropyErrorFunction::Factory::createThresholdEntropyErrorFunction(_nodes, _parent);
-            break;
-
-        default:
-            throw RuntimeException("Unknown error measure.");
-            break;
-    }
-}
-
-AbstractErrorFunction::ptr AbstractErrorFunction::Factory::createAssignmentEntropyErrorFunction(char _criteria, NodeRow & _nodes, TrainingDAGNode::ptr _parent, int _childNodeCount)
-{
-    // Determine the error measure to use
-    switch (_criteria)
-    {
-        case AbstractErrorFunction::error_entropy:
-            return AbstractEntropyErrorFunction::Factory::createAssignmentEntropyErrorFunction(_nodes, _parent, _childNodeCount);
-            break;
-
-        default:
-            throw RuntimeException("Unknown error measure.");
-            break;
-    }
-}
-
-AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createRowErrorFunction(NodeRow & _nodes)
-{
-    INC_DEBUG
-    AbstractErrorFunctionPtr errorFunction = new RowEntropyErrorFunction(&_nodes);
-    return errorFunction;
-}
-
-AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createChildRowErrorFunction(NodeRow & _nodes, int _childNodeCount)
-{
-    INC_DEBUG
-    AbstractErrorFunctionPtr errorFunction = new ChildRowEntropyErrorFunction(&_nodes, _childNodeCount);
-    return errorFunction;
-}
-
-AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createThresholdEntropyErrorFunction(NodeRow & _nodes, TrainingDAGNode::ptr _parent)
-{
-    INC_DEBUG
-    ThresholdEntropyErrorFunction* errorFunction = new ThresholdEntropyErrorFunction(&_nodes, _parent);
-    errorFunction->initHistograms();
-    return errorFunction;
-}
-
-AbstractErrorFunction::ptr AbstractEntropyErrorFunction::Factory::createAssignmentEntropyErrorFunction(NodeRow & _nodes, TrainingDAGNode::ptr _parent, int _childNodeCount)
-{
-    INC_DEBUG
-    AssignmentEntropyErrorFunction* errorFunction = new AssignmentEntropyErrorFunction(&_nodes, _parent, _childNodeCount);
-    errorFunction->initHistograms();
-    return errorFunction;
-}
-
 double TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet)
 {
     ProgressBar::ptr progressBar = ProgressBar::Factory::create(_trainingSet->size());
@@ -825,38 +731,38 @@ double TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _
 
 void ThresholdEntropyErrorFunction::initHistograms()
 {
-    int classCount = (*row->begin())->getClassHistogram()->size();
+    int classCount = (*row.begin())->getClassHistogram()->size();
 
-    leftHistogram = ClassHistogram::Factory::createEmpty(classCount);
-    rightHistogram = ClassHistogram::Factory::createEmpty(classCount);
-    cleftHistogram = ClassHistogram::Factory::createEmpty(classCount);
-    crightHistogram = ClassHistogram::Factory::createEmpty(classCount);
+    leftHistogram.resize(classCount);
+    rightHistogram.resize(classCount);
+    cleftHistogram.resize(classCount);
+    crightHistogram.resize(classCount);
 
     // Compute the histograms for all child nodes
-    for (NodeRow::iterator it = row->begin(); it != row->end(); ++it)
+    for (NodeRow::iterator it = row.begin(); it != row.end(); ++it)
     {
         // Skip the parent node
         if (*it == parent) continue;
         
         int leftNode = (*it)->getTempLeft();
-        ClassHistogram::ptr _leftHistogram = (*it)->getLeftHistogram();
         int rightNode = (*it)->getTempRight();
-        ClassHistogram::ptr _rightHistogram = (*it)->getRightHistogram();
+        ClassHistogram* _leftHistogram = (*it)->getLeftHistogram();
+        ClassHistogram* _rightHistogram = (*it)->getRightHistogram();
 
         if (leftNode == parent->getTempLeft())
         {
             // Add the values to the histogram
             for (int i = 0; i < classCount; i++)
             {
-                leftHistogram->add(i, _leftHistogram->at(i));
+                leftHistogram.add(i, _leftHistogram->at(i));
             }
         }
-        else if (leftNode == parent->getTempRight())
+        if (leftNode == parent->getTempRight())
         {
             // Add the values to the histogram
             for (int i = 0; i < classCount; i++)
             {
-                rightHistogram->add(i, _leftHistogram->at(i));
+                rightHistogram.add(i, _leftHistogram->at(i));
             }
         }
 
@@ -865,15 +771,15 @@ void ThresholdEntropyErrorFunction::initHistograms()
             // Add the values to the histogram
             for (int i = 0; i < classCount; i++)
             {
-                leftHistogram->add(i, _rightHistogram->at(i));
+                leftHistogram.add(i, _rightHistogram->at(i));
             }
         }
-        else if (leftNode == parent->getTempRight())
+        if (leftNode == parent->getTempRight())
         {
             // Add the values to the histogram
             for (int i = 0; i < classCount; i++)
             {
-                rightHistogram->add(i, _rightHistogram->at(i));
+                rightHistogram.add(i, _rightHistogram->at(i));
             }
         }
     }
@@ -881,10 +787,10 @@ void ThresholdEntropyErrorFunction::initHistograms()
 
 void AssignmentEntropyErrorFunction::initHistograms()
 {
-    int classCount = (*row->begin())->getClassHistogram()->size();
+    int classCount = (*row.begin())->getClassHistogram()->size();
+    currentHist.resize(classCount);
     dataCount = 0;
     // We build up a histogram for every (virtual) child node
-    INC_DEBUG
     histograms = new ClassHistogram[childNodeCount];
     // Initialize the histograms
     for (int i = 0; i < childNodeCount; i++)
@@ -893,87 +799,39 @@ void AssignmentEntropyErrorFunction::initHistograms()
     }
 
     // Compute the histograms for all child nodes
-    for (NodeRow::iterator it = row->begin(); it != row->end(); ++it)
+    for (NodeRow::iterator it = row.begin(); it != row.end(); ++it)
     {
+        int leftNode = (*it)->getTempLeft();
+        int rightNode = (*it)->getTempRight();
+        ClassHistogram* leftHistogram = (*it)->getLeftHistogram();
+        ClassHistogram* rightHistogram = (*it)->getRightHistogram();
+
+        dataCount += leftHistogram->getMass() + rightHistogram->getMass();\
+
         // Skip the current parent node
         if (*it == parent) continue;
         
-        int leftNode = (*it)->getTempLeft();
-        int rightNode = (*it)->getTempRight();
-        ClassHistogram::ptr leftHistogram = (*it)->getLeftHistogram();
-        ClassHistogram::ptr rightHistogram = (*it)->getRightHistogram();
-
         // Add the values to the histogram
         for (int i = 0; i < classCount; i++)
         {
             histograms[leftNode].add(i, leftHistogram->at(i));
             histograms[rightNode].add(i, rightHistogram->at(i));
         }
-
-        dataCount += leftHistogram->getMass() + rightHistogram->getMass();
     }
 
     // Calculate the entropies based on the built up histograms
-    INC_DEBUG
     entropies = new double[childNodeCount];
     
     for (int i = 0; i < childNodeCount; i++)
     {
-        entropies[i] = entropy(&histograms[i]);
+        entropies[i] = histograms[i].entropy();
     }
-}
-
-double AssignmentEntropyErrorFunction::error() const
-{
-    double error = 0;
-    
-    int classCount = (*row->begin())->getClassHistogram()->size();
-    ClassHistogram::ptr currentHist = ClassHistogram::Factory::createEmpty(classCount);
-    
-    for (int i = 0; i < childNodeCount; i++)
-    {
-        if (i == parent->getTempLeft())
-        {
-            ClassHistogram::ptr leftHistogram = parent->getLeftHistogram();
-        
-            // Calculate the added histogram
-            for (int j = 0; j < classCount; j++)
-            {
-                currentHist->set(j, histograms[i].at(j) + leftHistogram->at(j));
-            }
-            
-            double currentDataCount = histograms[i].getMass() + parent->getLeftHistogram()->getMass();
-            error += currentDataCount/dataCount * entropy(currentHist);
-        }
-        else if (i == parent->getTempRight())
-        {
-            ClassHistogram::ptr leftHistogram = parent->getRightHistogram();
-        
-            // Calculate the added histogram
-            for (int j = 0; j < classCount; j++)
-            {
-                currentHist->set(j, histograms[i].at(j) + leftHistogram->at(j));
-            }
-            
-            double currentDataCount = histograms[i].getMass() + parent->getLeftHistogram()->getMass();
-            error += currentDataCount/dataCount * entropy(currentHist);
-        }
-        else
-        {
-            error += histograms[i].getMass()/dataCount * entropies[i];
-        }
-    }
-    
-    return error;
 }
 
 void TrainingDAGNode::updateLeftRightHistogram()
 {
-    for (int c = 0; c < trainer->getClassCount(); c++)
-    {
-        leftHistogram->set(c, 0);
-        rightHistogram->set(c, 0);
-    }
+    leftHistogram.reset();
+    rightHistogram.reset();
 
     for (TrainingSet::iterator tit = trainingSet->begin(); tit != trainingSet->end(); ++tit)
     {
@@ -981,12 +839,12 @@ void TrainingDAGNode::updateLeftRightHistogram()
         if ((*tit)->getDataPoint()->at(getFeatureID()) <= getThreshold())
         {
             // Left child node
-            leftHistogram->add((*tit)->getClassLabel(), 1);
+            leftHistogram.addOne((*tit)->getClassLabel());
         }
         else
         {
             // Right child node
-            rightHistogram->add((*tit)->getClassLabel(), 1);
+            rightHistogram.addOne((*tit)->getClassLabel());
         }
     }
 }
