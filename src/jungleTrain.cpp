@@ -10,6 +10,7 @@
 #include "jungleTrain.h"
 #include <boost/tokenizer.hpp>
 #include <cstdlib>
+#include "omp.h"
 
 using namespace decision_jungle;
 
@@ -124,7 +125,7 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
         
         if (getVerboseMode())
         {
-            //printf("level: %5d, nodes: %6d\n", level, static_cast<int>(parentNodes.size()));
+            printf("level: %5d, nodes: %6d\n", level, static_cast<int>(parentNodes.size()));
         }
         
         // Train the level
@@ -689,29 +690,40 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
     // Display some error statistics
     TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
 
+    #pragma omp parallel for
     for (int i = 0; i < numDAGs; i++)
     {
-        if (getVerboseMode())
+        #pragma omp critical
         {
-            std::cout << "Train DAG " << (i+1) << "/" << getNumDAGs() << std::endl;
-            
+            if (getVerboseMode())
+            {
+                std::cout << "Train DAG " << (i+1) << "/" << getNumDAGs() << std::endl;
+            }
         }
+        
         // Create a training set for each DAG by sampling from the given training set
-        // FIXME: Parameter bagging on/off
         TrainingSet::ptr sampledSet = trainingSet;
         if (getUseBagging())
         {
             sampledSet = TrainingSet::Factory::createBySampling(trainingSet, numTrainingSamples);
         }
         
-        DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(this, sampledSet);
-        jungle->getDAGs().insert(trainer->train());
+        DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(this, sampledSet);\
+        TrainingDAGNode::ptr dag = trainer->train();
+
+        #pragma omp critical
+        {
+            jungle->getDAGs().insert(dag);
+            if (getVerboseMode())
+            {
+                std::cout << "DAG completed\n";
+                std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
+                std::cout << "Test error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
+                std::cout << "----------------------------\n";
+            }
+        }
 
         delete trainer;
-        std::cout << "DAG completed\n";
-        std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
-        std::cout << "Test error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
-        std::cout << "----------------------------\n";
     }
     
     return jungle;
