@@ -298,6 +298,21 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
                 dumpSettings = ParameterConverter::getBool(it->second);
                 break;
                 
+            case 'V':
+                validationSetFileName = it->second;
+                break;
+               
+            case 'v':
+                validationLevel = ParameterConverter::getInt(it->second);
+                break;
+        }
+        
+        // If there is a validation set, the validation level should be at least 1
+        if (validationSetFileName.size() > 0)
+        {
+            validationLevel = std::max(std::abs(validationLevel), 1);
+            validationLevel = std::min(validationLevel, 3);
+            _trainer->setValidationLevel(validationLevel);
         }
     }
 }
@@ -337,8 +352,17 @@ int TrainCLIFunction::execute()
     }
     
     // Load the training set
-    std::cout << "Load training set" << std::endl;
+    std::cout << "Loading training set" << std::endl;
     TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), true);
+    TrainingSet::ptr testSet = 0;
+    
+    // If there is a validation set, load it
+    if (validationLevel > 0)
+    {
+        std::cout << "Loading validation set" << std::endl;
+        testSet = TrainingSet::Factory::createFromFile(validationSetFileName, true);
+        jungleTrainer->setValidationSet(testSet);
+    }
     
     std::cout << std::endl;
     
@@ -355,6 +379,11 @@ int TrainCLIFunction::execute()
     
     std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
     
+    if (validationLevel > 0)
+    {
+        std::cout << "Test error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
+        TrainingSet::freeTrainingExamples(testSet);
+    }
     TrainingSet::freeTrainingExamples(trainingSet);
     
     // Save the jungle in a file
@@ -381,7 +410,9 @@ const char* TrainCLIFunction::help()
             " -B [bool]     Whether of not to use bagging. See also -N\n"
             " -I [int]      Maximum number of iterations at each level\n"
             " -t [bool]     Whether or not to use stochastic threshold selection\n"
-            " -c [bool]     Whether or not to use stochastic child node assignment optimization\n\n"
+            " -c [bool]     Whether or not to use stochastic child node assignment optimization\n"
+            " -V [string]   The filename of a validation set\n\n"
+            " -v [int]      Validation level. 1: After training, 2: After each DAG, 3: After each level \n\n"
             "DESCRIPTION\n"
             " This command trains a new decision jungle on the training set\n"
             " stored in {trainingset}. The trained model will be saved in\n"
