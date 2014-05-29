@@ -400,6 +400,16 @@ namespace decision_jungle {
          */
         bool useStochasticChildNodeAssignment;
         
+        /**
+         * The validation level
+         */
+        int validationLevel;
+        
+        /**
+         * The validation set
+         */
+        TrainingSet::ptr validationSet;
+        
     protected:
         /**
          * Validates all parameters and throws an exception is some parameters are invalid
@@ -411,6 +421,40 @@ namespace decision_jungle {
     public:
         typedef AbstractTrainer self;
         typedef self* ptr;
+        
+        /**
+         * Sets validationLevel
+         */
+        void setValidationLevel(int _validationLevel)
+        {
+            validationLevel = _validationLevel;
+        }
+        
+        /**
+         * Returns validationLevel
+         * 
+         * @return validationLevel
+         */
+        int getValidationLevel()
+        {
+            return validationLevel;
+        }
+        
+        /**
+         * Sets the validation set
+         */
+        void setValidationSet(TrainingSet::ptr _validationSet)
+        {
+            validationSet = _validationSet;
+        }
+        
+        /**
+         * Returns the validation set
+         */
+        TrainingSet::ptr getValidationSet()
+        {
+            return validationSet;
+        }
         
         /**
          * Sets useBagging

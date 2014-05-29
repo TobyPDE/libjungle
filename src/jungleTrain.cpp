@@ -120,7 +120,10 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
         
         if (getVerboseMode())
         {
-            printf("level: %5d, nodes: %6d, training error: %1.6f \n", level, static_cast<int>(parentNodes.size()), statisticsTool->trainingError(jungle, trainingSet));
+            if (getValidationLevel() >= 3)
+            {
+                printf("level: %5d, nodes: %6d, training error: %1.6f, test error: %1.6f \n", level, static_cast<int>(parentNodes.size()), statisticsTool->trainingError(jungle, trainingSet), statisticsTool->trainingError(jungle, getValidationSet()));
+            }
         }
         
         // Train the level
@@ -633,6 +636,8 @@ DAGTrainer::ptr DAGTrainer::Factory::createFromJungleTrainer(JungleTrainer::ptr 
     result->setMaxLevelIterations(_jungleTrainer->getMaxLevelIterations());
     result->setUseStochasticThreshold(_jungleTrainer->getUseStochasticThreshold());
     result->setUseStochasticChildNodeAssignment(_jungleTrainer->getUseStochasticChildNodeAssignment());
+    result->setValidationLevel(_jungleTrainer->getValidationLevel());
+    result->setValidationSet(_jungleTrainer->getValidationSet());
     
     return result;
 }
@@ -647,6 +652,8 @@ void AbstractTrainer::Factory::init(AbstractTrainer::ptr _trainer)
     _trainer->maxLevelIterations = 55;
     _trainer->useStochasticThreshold = false;
     _trainer->useStochasticChildNodeAssignment = false;
+    _trainer->validationLevel = 0;
+    _trainer->validationSet = 0;
     // -1 means that the number of features to sample will be determined automatically
     _trainer->numFeatureSamples = -1;
 }
@@ -712,6 +719,10 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
             {
                 std::cout << "DAG completed\n";
                 std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
+                if (getValidationLevel() >= 2)
+                {
+                    std::cout << "Test error: " << statisticsTool->trainingError(jungle, getValidationSet()) << std::endl;
+                }
                 std::cout << "----------------------------\n";
             }
         }

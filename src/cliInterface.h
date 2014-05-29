@@ -327,6 +327,16 @@ namespace decision_jungle {
          */
         bool dumpSettings;
         
+        /**
+         * The filename of a validation set
+         */
+        std::string validationSetFileName;
+        
+        /**
+         * The validation level
+         */
+        int validationLevel;
+        
     public:
         /**
          * Executes the command/function
