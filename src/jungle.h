@@ -17,7 +17,7 @@
 #include "misc.h"
 #include "fastlog.h"
 #include <cmath>
-#define ENTROPY(p) -(p) * fasterlog2(p)
+#define ENTROPY(p) -(p) * fastlog2(p)
 
 namespace decision_jungle
 {

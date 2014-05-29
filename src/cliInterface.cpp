@@ -354,7 +354,7 @@ int TrainCLIFunction::execute()
     // Load the training set
     std::cout << "Loading training set" << std::endl;
     TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), false);
-    TrainingSet::ptr testSet = 0;
+    TrainingSet::ptr testSet;
     
     // If there is a validation set, load it
     if (validationLevel > 0)

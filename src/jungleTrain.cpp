@@ -145,10 +145,14 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
 
 NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
 {
+    // Sort the parent nodes decreasing by their entropy
+    NodeEntropyComparator compare;
+    std::sort(parentNodes.begin(), parentNodes.end(), compare);
+    
     // Initialize the parent level
     // We need a counter in order to assign the parent to some virtual children
     int vChildren = 0;
-    for (NodeRow::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
+    for (NodeRow::reverse_iterator iter = parentNodes.rbegin(); iter != parentNodes.rend(); ++iter)
     {
         (*iter)->setThreshold(0);
         (*iter)->setFeatureID(0);
@@ -342,6 +346,8 @@ void TrainingDAGNode::updateHistogramAndLabel()
     setClassLabel(TrainingUtil::histogramArgMax(*getClassHistogram()));
     
     pure = TrainingUtil::histogramIsDirichlet(*getClassHistogram());
+    
+    entropy = getClassHistogram()->entropy();
 }
 
 bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
