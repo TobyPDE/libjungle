@@ -1049,10 +1049,10 @@ namespace decision_jungle {
          */
         ClassHistogram rightHistogram;
         /**
-         * Left/right data count
+         * Current left/right histogram
          */
-        ClassHistogram cleftHistogram;
-        ClassHistogram crightHistogram;
+        EfficientEntropyHistogram cleftHistogram;
+        EfficientEntropyHistogram crightHistogram;
         
     public:
         /**
@@ -1064,8 +1064,7 @@ namespace decision_jungle {
         /**
          * Copy constructor
          */
-        ThresholdEntropyErrorFunction (const ThresholdEntropyErrorFunction & other) : row(other.row), parent(other.parent) {
-        }
+        ThresholdEntropyErrorFunction (const ThresholdEntropyErrorFunction & other) : row(other.row), parent(other.parent) {}
         
         /**
          * Assignment operator
@@ -1084,8 +1083,7 @@ namespace decision_jungle {
         /**
          * Destructor
          */
-        virtual ~ThresholdEntropyErrorFunction() {
-        }
+        virtual ~ThresholdEntropyErrorFunction() {}
         
         /**
          * Initializes the left/right histogram
@@ -1097,12 +1095,17 @@ namespace decision_jungle {
          */
         void resetHistograms()
         {
+            cleftHistogram.reset();
+            crightHistogram.reset();
+            
             // Initialize the histograms
             for (int i = 0; i < leftHistogram.size(); i++)
             {
                 cleftHistogram.set(i, leftHistogram.at(i));
                 crightHistogram.set(i, rightHistogram.at(i) + parent->getClassHistogram()->at(i));
             }
+            cleftHistogram.initEntropies();
+            crightHistogram.initEntropies();
         }
         
         /**
@@ -1119,13 +1122,7 @@ namespace decision_jungle {
          */
         float error() const
         {
-            float result = 0.;
-            
-            float dataCount = cleftHistogram.getMass() + crightHistogram.getMass();
-            result = cleftHistogram.getMass()/dataCount * cleftHistogram.entropy();
-            result += crightHistogram.getMass()/dataCount * crightHistogram.entropy();
-
-            return result;
+            return cleftHistogram.entropy() + crightHistogram.entropy();
         }
     };
 
@@ -1153,7 +1150,6 @@ namespace decision_jungle {
          * Number of child nodes
          */
         int childNodeCount;
-        ClassHistogram currentHist;
         
     public:
         /**
@@ -1199,11 +1195,9 @@ namespace decision_jungle {
         /**
          * Calculates the error if we split. This function expects the local histograms to be already computed.
          */
-        float error() 
+        float error() const 
         {
             float error = 0;
-
-            int classCount = (*row.begin())->getClassHistogram()->size();
 
             for (int i = 0; i < childNodeCount; i++)
             {
@@ -1211,49 +1205,28 @@ namespace decision_jungle {
                 {
                     ClassHistogram* leftHistogram = parent->getLeftHistogram();
 
-                    // Calculate the added histogram
-                    for (int j = 0; j < classCount; j++)
-                    {
-                        currentHist.set(j, histograms[i].at(j) + leftHistogram->at(j));
-                    }
-
-                    float currentDataCount = currentHist.getMass();
-                    error += currentDataCount/dataCount * currentHist.entropy();
+                    error += leftHistogram->getMass(histograms[i]) * leftHistogram->entropy(histograms[i]);
                 }
                 else if (i == parent->getTempRight() && i != parent->getTempLeft())
                 {
                     ClassHistogram* rightHistogram = parent->getRightHistogram();
 
-                    // Calculate the added histogram
-                    for (int j = 0; j < classCount; j++)
-                    {
-                        currentHist.set(j, histograms[i].at(j) + rightHistogram->at(j));
-                    }
-
-                    float currentDataCount = currentHist.getMass();
-                    error += currentDataCount/dataCount * currentHist.entropy();
+                    error += rightHistogram->getMass(histograms[i]) * rightHistogram->entropy(histograms[i]);
                 }
                 else if (i == parent->getTempRight() && i == parent->getTempLeft())
                 {
                     ClassHistogram* leftHistogram = parent->getLeftHistogram();
                     ClassHistogram* rightHistogram = parent->getRightHistogram();
 
-                    // Calculate the added histogram
-                    for (int j = 0; j < classCount; j++)
-                    {
-                        currentHist.set(j, histograms[i].at(j) + leftHistogram->at(j) + rightHistogram->at(j));
-                    }
-
-                    float currentDataCount = currentHist.getMass();
-                    error += currentDataCount/dataCount * currentHist.entropy();
+                    error += rightHistogram->getMass(histograms[i], *leftHistogram) * rightHistogram->entropy(histograms[i], *leftHistogram);
                 }
                 else
                 {
-                    error += histograms[i].getMass()/dataCount * entropies[i];
+                    error += histograms[i].getMass() * entropies[i];
                 }
             }
 
-            return error;
+            return error/dataCount;
         }
     };
     

@@ -10,7 +10,9 @@
 #include "jungleTrain.h"
 #include <boost/tokenizer.hpp>
 #include <cstdlib>
-#include "omp.h"
+#if OMP_H
+    #include "omp.h"
+#endif
 
 using namespace decision_jungle;
 
@@ -402,7 +404,7 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
             currentEntropy = error.error();
             
             // Only accept the split if the entropy decreases and the threshold is not insignificant
-            if (currentEntropy > bestEntropy && ( (*(it + 1))->getDataPoint()->at(getFeatureID()) - (*it)->getDataPoint()->at(getFeatureID())) >= 1e-6)
+            if (currentEntropy < bestEntropy && ( (*(it + 1))->getDataPoint()->at(getFeatureID()) - (*it)->getDataPoint()->at(getFeatureID())) >= 1e-6)
             {
                 // Select this feature and this threshold
                 bestFeatureID = getFeatureID();
@@ -447,7 +449,7 @@ bool TrainingDAGNode::findLeftChildNodeAssignment(NodeRow & parentNodes, int chi
         currentEntropy = error.error();\
 
         // Is this better?
-        if (currentEntropy > bestEntropy)
+        if (currentEntropy < bestEntropy)
         {
             // it is
             selectedLeft = cLeft;
@@ -488,7 +490,7 @@ bool TrainingDAGNode::findRightChildNodeAssignment(NodeRow & parentNodes, int ch
         currentEntropy = error.error();
 
         // Is this better?
-        if (currentEntropy > bestEntropy)
+        if (currentEntropy < bestEntropy)
         {
             // it is
             selectedRight = cRight;
@@ -531,7 +533,7 @@ bool TrainingDAGNode::findCoherentChildNodeAssignment(NodeRow & parentNodes, int
         currentEntropy = error.error();
 
         // Is this better?
-        if (currentEntropy > bestEntropy)
+        if (currentEntropy < bestEntropy)
         {
             // it is
             selectedRight = current;
@@ -731,8 +733,6 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
 
 float TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _trainingSet)
 {
-    ProgressBar::ptr progressBar = ProgressBar::Factory::create(_trainingSet->size());
-   
     // Calculate the training error
     float error = 0;
     for (TrainingSet::iterator iter = _trainingSet->begin(); iter != _trainingSet->end(); ++iter)
@@ -812,7 +812,7 @@ void ThresholdEntropyErrorFunction::initHistograms()
 void AssignmentEntropyErrorFunction::initHistograms()
 {
     int classCount = (*row.begin())->getClassHistogram()->size();
-    currentHist.resize(classCount);
+    
     dataCount = 0;
     // We build up a histogram for every (virtual) child node
     histograms = new ClassHistogram[childNodeCount];
