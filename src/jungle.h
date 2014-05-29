@@ -17,7 +17,7 @@
 #include "misc.h"
 #include "fastlog.h"
 #include <cmath>
-#define ENTROPY(p) -(p) * fl2(p)
+#define ENTROPY(p) -(p) * fasterlog2(p)
 
 namespace decision_jungle
 {
@@ -91,14 +91,6 @@ namespace decision_jungle
         };
     };
     
-    static inline float fl2(float x)
-    {
-            union { float f; uint32_t i; } vx = { x };
-            union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-            float y = float(vx.i); y *= 1.1920928955078125e-7f;
-            return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
-    }
-
     /**
      * A data set is a collection of data points
      */
