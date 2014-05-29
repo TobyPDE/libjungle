@@ -229,6 +229,11 @@ namespace decision_jungle {
          */
         bool pure;
         
+        /**
+         * The histogram entropy, this is used for sorting the parent nodes
+         */
+        float entropy;
+        
     public:
         typedef TrainingDAGNode self;
         typedef self* ptr;
@@ -323,6 +328,14 @@ namespace decision_jungle {
         bool isPure()
         {
             return pure;
+        }
+        
+        /**
+         * Returns the histogram entropy
+         */
+        float getEntropy()
+        {
+            return entropy;
         }
         
         /**
@@ -1564,7 +1577,7 @@ namespace decision_jungle {
          */
         bool operator() (const TrainingDAGNode::ptr lhs, const TrainingDAGNode::ptr rhs)
         {
-            return (lhs->getClassHistogram()->entropy() >= rhs->getClassHistogram()->entropy());
+            return (lhs->getEntropy() < rhs->getEntropy());
         }
     };
     
