@@ -353,14 +353,14 @@ int TrainCLIFunction::execute()
     
     // Load the training set
     std::cout << "Loading training set" << std::endl;
-    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), true);
+    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), false);
     TrainingSet::ptr testSet = 0;
     
     // If there is a validation set, load it
     if (validationLevel > 0)
     {
         std::cout << "Loading validation set" << std::endl;
-        testSet = TrainingSet::Factory::createFromFile(validationSetFileName, true);
+        testSet = TrainingSet::Factory::createFromFile(validationSetFileName, false);
         jungleTrainer->setValidationSet(testSet);
     }
     
@@ -445,7 +445,6 @@ const char* VersionCLIFunction::help()
             " This command displays the version and license information\n"
             " for this build.\n";
 }
-
 
 const char* VersionCLIFunction::shortHelp()
 {

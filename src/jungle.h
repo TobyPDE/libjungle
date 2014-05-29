@@ -15,6 +15,9 @@
 #include <set>
 #include <memory>
 #include "misc.h"
+#include "fastlog.h"
+#include <cmath>
+#define ENTROPY(p) -(p) * fl2(p)
 
 namespace decision_jungle
 {
@@ -46,7 +49,7 @@ namespace decision_jungle
      */
     class DataPoint {
     public:
-        typedef std::vector<double> self;
+        typedef std::vector<float> self;
         typedef self* ptr;
         
         /**
@@ -88,7 +91,14 @@ namespace decision_jungle
         };
     };
     
-    
+    static inline float fl2(float x)
+    {
+            union { float f; uint32_t i; } vx = { x };
+            union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+            float y = float(vx.i); y *= 1.1920928955078125e-7f;
+            return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
+    }
+
     /**
      * A data set is a collection of data points
      */
@@ -143,21 +153,6 @@ namespace decision_jungle
          * The integral over the entire histogram
          */
         int mass;
-        
-        /**
-         * fast approximate log2(x) from Paul Mineiro <paul@mineiro.com>
-         * 
-         * Taken from 
-         * Piotr's Image&Video Toolbox      Version 3.24
-         * Copyright 2013 Piotr Dollar.  [pdollar-at-caltech.edu]
-         */
-        static float flog2( float x )
-        {
-            union { float f; uint32_t i; } vx = { x };
-            union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-            float y = float(vx.i); y *= 1.1920928955078125e-7f;
-            return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
-        }
         
     public:
         /**
@@ -283,19 +278,17 @@ namespace decision_jungle
             if (sum < 1) return 0;
             
             float entropy = 0;
-            float p;
             
             for (int i = 0; i < bins; i++)
             {
                 // Empty bins do not contribute anything
                 if (at(i) > 0)
                 {
-                    p = at(i)/sum;
-                    entropy += p * flog2(p);
+                    entropy += ENTROPY(at(i)/sum);
                 }
             }
 
-            return -entropy;
+            return entropy;
         }
         
         /**
@@ -311,7 +304,6 @@ namespace decision_jungle
             
             float entropy = 0;
             float numerator = 0;
-            float p = 0;
             
             for (int i = 0; i < bins; i++)
             {
@@ -319,12 +311,11 @@ namespace decision_jungle
                 numerator = at(i) + _hist.at(i);
                 if (numerator > 0)
                 {
-                    p = numerator/sum;
-                    entropy += p * flog2(p);
+                    entropy += ENTROPY(numerator/sum);
                 }
             }
             
-            return -entropy;
+            return entropy;
         }
         
         /**
@@ -340,7 +331,6 @@ namespace decision_jungle
             
             float entropy = 0;
             float numerator = 0;
-            float p = 0;
             
             for (int i = 0; i < bins; i++)
             {
@@ -348,12 +338,11 @@ namespace decision_jungle
                 numerator = at(i) + _hist2.at(i) + _hist1.at(i);
                 if (numerator > 0)
                 {
-                    p = numerator/sum;
-                    entropy += p * flog2(p);
+                    entropy += ENTROPY(numerator/sum);
                 }
             }
             
-            return -entropy;
+            return entropy;
         }
         
         /**
@@ -402,27 +391,12 @@ namespace decision_jungle
          */
         float totalEntropy;
         
-        /**
-         * fast approximate log2(x) from Paul Mineiro <paul@mineiro.com>
-         * 
-         * Taken from 
-         * Piotr's Image&Video Toolbox      Version 3.24
-         * Copyright 2013 Piotr Dollar.  [pdollar-at-caltech.edu]
-         */
-        static float flog2( float x )
-        {
-            union { float f; uint32_t i; } vx = { x };
-            union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-            float y = float(vx.i); y *= 1.1920928955078125e-7f;
-            return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
-        }
-        
     public:
         /**
          * Default constructor
          */
-        EfficientEntropyHistogram() : bins(0), histogram(0), mass(0), totalEntropy(0), entropies(0) { }
-        EfficientEntropyHistogram(int _classCount) : bins(_classCount), histogram(0), mass(0), totalEntropy(0), entropies(0) { resize(_classCount); }
+        EfficientEntropyHistogram() : bins(0), histogram(0), mass(0), entropies(0), totalEntropy(0) { }
+        EfficientEntropyHistogram(int _classCount) : bins(_classCount), histogram(0), mass(0), entropies(0), totalEntropy(0) { resize(_classCount); }
         
         /**
          * Copy constructor
@@ -519,19 +493,19 @@ namespace decision_jungle
         void sub(int i, int v) { mass -= v; histogram[i] -= v; }
         void addOne(int i)
         {
-            totalEntropy -= getMass() * flog2(getMass());
+            totalEntropy += ENTROPY(getMass());
             mass++;
-            totalEntropy += getMass() * flog2(getMass());
+            totalEntropy += -ENTROPY(getMass());
             histogram[i]++;
             totalEntropy -= entropies[i];
-            entropies[i] = - histogram[i] * flog2(histogram[i]); 
+            entropies[i] = ENTROPY(histogram[i]); 
             totalEntropy += entropies[i];
         }
         void subOne(int i)
         { 
-            totalEntropy -= getMass() * flog2(getMass());
+            totalEntropy += ENTROPY(getMass());
             mass--; 
-            totalEntropy += getMass() * flog2(getMass());
+            totalEntropy += -ENTROPY(getMass());
             
             histogram[i]--;
             totalEntropy -= entropies[i];
@@ -541,7 +515,7 @@ namespace decision_jungle
             }
             else
             {
-                entropies[i] = - histogram[i] * flog2(histogram[i]); 
+                entropies[i] = ENTROPY(histogram[i]); 
             }
             totalEntropy += entropies[i];
         }
@@ -566,14 +540,26 @@ namespace decision_jungle
          */
         void initEntropies()
         {
-            for (int i = 0; i < bins; i++)
+            if (getMass() < 1)
             {
-                if (at(i) == 0) continue;
-                
-                entropies[i] = -at(i) * flog2(at(i));
-                totalEntropy += entropies[i];
+                totalEntropy = 0;
+                for (int i = 0; i < bins; i++)
+                {
+                    entropies[i] = 0;
+                }
             }
-            totalEntropy += getMass() * flog2(getMass());
+            else
+            {
+                totalEntropy = -ENTROPY(getMass());
+                for (int i = 0; i < bins; i++)
+                {
+                    if (at(i) == 0) continue;
+
+                    entropies[i] = ENTROPY(at(i));
+                    
+                    totalEntropy += entropies[i];
+                }
+            }
         }
         
         /**

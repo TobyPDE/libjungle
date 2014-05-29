@@ -118,16 +118,17 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
         // Determine the number of child nodes
         childNodeCount = std::min(static_cast<int>(parentNodes.size()) * 2, getMaxWidth());
         
+        // Train the level
+        parentNodes = trainLevel(parentNodes, childNodeCount);
+        
         if (getVerboseMode())
         {
             if (getValidationLevel() >= 3)
             {
                 printf("level: %5d, nodes: %6d, training error: %1.6f, test error: %1.6f \n", level, static_cast<int>(parentNodes.size()), statisticsTool->trainingError(jungle, trainingSet), statisticsTool->trainingError(jungle, getValidationSet()));
+                std::cout.flush();
             }
         }
-        
-        // Train the level
-        parentNodes = trainLevel(parentNodes, childNodeCount);
         
         std::cout.flush();
     
@@ -144,8 +145,6 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
 
 NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
 {
-    // FIXME: Sort the parent nodes according to their entropy
-    
     // Initialize the parent level
     // We need a counter in order to assign the parent to some virtual children
     int vChildren = 0;
@@ -217,7 +216,6 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
             }
         }
     }
-    // FIXME: Set maximum iterations as config
     while (change && ++iterationCounter < getMaxLevelIterations());
 
     // Determine whether or not the row training shall be performed
@@ -352,7 +350,11 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
     if (trainingSet->size() == 0) return false;
     
     ThresholdEntropyErrorFunction error(parentNodes, this); 
+    
     error.initHistograms();
+    // Compute the current error in order to find a better threshold
+    float bestEntropy = error.error();
+    
     error.resetHistograms();
             
     // We need to save the current settings in order to restore them after optimization because we modify the object
@@ -360,8 +362,6 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
     int bestFeatureID = getFeatureID();
     float bestThreshold = getThreshold();
     
-    // Compute the current error in order to find a better threshold
-    float bestEntropy = error.error();
     float currentEntropy = 0;
     
     // Return flag to notify the calling optimizer whether or not we changed the threshold
@@ -438,7 +438,7 @@ bool TrainingDAGNode::findLeftChildNodeAssignment(NodeRow & parentNodes, int chi
         setTempLeft(cLeft);
 
         // Get the error
-        currentEntropy = error.error();\
+        currentEntropy = error.error();
 
         // Is this better?
         if (currentEntropy < bestEntropy)
@@ -752,106 +752,6 @@ float TrainingStatistics::trainingError(Jungle::ptr _jungle, TrainingSet::ptr _t
     }
     
     return error;
-}
-
-
-void ThresholdEntropyErrorFunction::initHistograms()
-{
-    int classCount = (*row.begin())->getClassHistogram()->size();
-
-    leftHistogram.resize(classCount);
-    rightHistogram.resize(classCount);
-    cleftHistogram.resize(classCount);
-    crightHistogram.resize(classCount);
-
-    // Compute the histograms for all child nodes
-    for (NodeRow::iterator it = row.begin(); it != row.end(); ++it)
-    {
-        // Skip the parent node
-        if (*it == parent) continue;
-        
-        int leftNode = (*it)->getTempLeft();
-        int rightNode = (*it)->getTempRight();
-        ClassHistogram* _leftHistogram = (*it)->getLeftHistogram();
-        ClassHistogram* _rightHistogram = (*it)->getRightHistogram();
-
-        if (leftNode == parent->getTempLeft())
-        {
-            // Add the values to the histogram
-            for (int i = 0; i < classCount; i++)
-            {
-                leftHistogram.add(i, _leftHistogram->at(i));
-            }
-        }
-        if (leftNode == parent->getTempRight())
-        {
-            // Add the values to the histogram
-            for (int i = 0; i < classCount; i++)
-            {
-                rightHistogram.add(i, _leftHistogram->at(i));
-            }
-        }
-
-        if (rightNode == parent->getTempLeft())
-        {
-            // Add the values to the histogram
-            for (int i = 0; i < classCount; i++)
-            {
-                leftHistogram.add(i, _rightHistogram->at(i));
-            }
-        }
-        if (leftNode == parent->getTempRight())
-        {
-            // Add the values to the histogram
-            for (int i = 0; i < classCount; i++)
-            {
-                rightHistogram.add(i, _rightHistogram->at(i));
-            }
-        }
-    }
-}
-
-void AssignmentEntropyErrorFunction::initHistograms()
-{
-    int classCount = (*row.begin())->getClassHistogram()->size();
-    
-    dataCount = 0;
-    // We build up a histogram for every (virtual) child node
-    histograms = new ClassHistogram[childNodeCount];
-    // Initialize the histograms
-    for (int i = 0; i < childNodeCount; i++)
-    {
-        histograms[i].resize(classCount);
-    }
-
-    // Compute the histograms for all child nodes
-    for (NodeRow::iterator it = row.begin(); it != row.end(); ++it)
-    {
-        int leftNode = (*it)->getTempLeft();
-        int rightNode = (*it)->getTempRight();
-        ClassHistogram* leftHistogram = (*it)->getLeftHistogram();
-        ClassHistogram* rightHistogram = (*it)->getRightHistogram();
-
-        dataCount += leftHistogram->getMass() + rightHistogram->getMass();\
-
-        // Skip the current parent node
-        if (*it == parent) continue;
-        
-        // Add the values to the histogram
-        for (int i = 0; i < classCount; i++)
-        {
-            histograms[leftNode].add(i, leftHistogram->at(i));
-            histograms[rightNode].add(i, rightHistogram->at(i));
-        }
-    }
-
-    // Calculate the entropies based on the built up histograms
-    entropies = new float[childNodeCount];
-    
-    for (int i = 0; i < childNodeCount; i++)
-    {
-        entropies[i] = histograms[i].entropy();
-    }
 }
 
 void TrainingDAGNode::updateLeftRightHistogram()
