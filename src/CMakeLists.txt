@@ -1,6 +1,6 @@
 set ( lib_jungle_SOURCES jungleTrain.cpp jungle.cpp )
 add_library ( lib_jungle ${lib_jungle_SOURCES} )
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 find_package( Boost 1.40.0 COMPONENTS system REQUIRED )
 include_directories( ${Boost_INCLUDE_DIR} )
 configure_file (

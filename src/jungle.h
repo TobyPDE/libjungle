@@ -256,6 +256,16 @@ namespace decision_jungle
         float getMass() const { return mass; }
         
         /**
+         * Returns the mass of the combined histogram (this + _hist)
+         */
+        float getMass(const ClassHistogram & _hist) const { return getMass() + _hist.getMass(); }
+        
+        /**
+         * Returns the mass of the combined histogram (this + _hist1 + _hist2)
+         */
+        float getMass(const ClassHistogram & _hist1, const ClassHistogram & _hist2) const { return getMass() + _hist1.getMass() + _hist2.getMass(); }
+        
+        /**
          * Iterator interface from STL
          */
         int begin() const { return 0; } 
@@ -268,23 +278,81 @@ namespace decision_jungle
          */
         float entropy() const
         {
-            if (mass == 0) return 0;
+            float sum = getMass();
+            if (sum < 1) return 0;
             
             float entropy = 0;
+            float p;
             
-            // Get the total number of elements in the histogram
-            float sum = getMass();
-
             for (int i = 0; i < bins; i++)
             {
                 // Empty bins do not contribute anything
-                if (at(i) > 0 && sum > 0)
+                if (at(i) > 0)
                 {
-                    entropy += at(i)/sum * flog2(at(i)/sum);
+                    p = at(i)/sum;
+                    entropy += p * flog2(p);
                 }
             }
 
-            return entropy;
+            return -entropy;
+        }
+        
+        /**
+         * Calculates the entropy of the histogram (this + _hist)
+         * 
+         * @return The calculated entropy
+         */
+        float entropy(const ClassHistogram & _hist) const
+        {
+            float sum = getMass(_hist);
+            
+            if (sum < 1) return 0;
+            
+            float entropy = 0;
+            float numerator = 0;
+            float p = 0;
+            
+            for (int i = 0; i < bins; i++)
+            {
+                // Empty bins do not contribute anything
+                numerator = at(i) + _hist.at(i);
+                if (numerator > 0)
+                {
+                    p = numerator/sum;
+                    entropy += p * flog2(p);
+                }
+            }
+            
+            return -entropy;
+        }
+        
+        /**
+         * Calculates the entropy of the histogram (this + _hist)
+         * 
+         * @return The calculated entropy
+         */
+        float entropy(const ClassHistogram & _hist1, const ClassHistogram & _hist2) const
+        {
+            float sum = getMass(_hist1, _hist2);
+            
+            if (sum < 1) return 0;
+            
+            float entropy = 0;
+            float numerator = 0;
+            float p = 0;
+            
+            for (int i = 0; i < bins; i++)
+            {
+                // Empty bins do not contribute anything
+                numerator = at(i) + _hist2.at(i) + _hist1.at(i);
+                if (numerator > 0)
+                {
+                    p = numerator/sum;
+                    entropy += p * flog2(p);
+                }
+            }
+            
+            return -entropy;
         }
         
         /**
@@ -299,6 +367,228 @@ namespace decision_jungle
             {
                 histogram[i] = 0;
             }
+            mass = 0;
+        }
+    };
+    
+    /**
+     * A histogram over the class labels
+     */
+    class EfficientEntropyHistogram {
+    private:
+        /**
+         * The number of classes in this histogram
+         */
+        int bins;
+        
+        /**
+         * The actual histogram
+         */
+        int* histogram;
+        
+        /**
+         * The integral over the entire histogram
+         */
+        int mass;
+        
+        /**
+         * The entropies for the single bins
+         */
+        float* entropies;
+        
+        /**
+         * The total entropy
+         */
+        float totalEntropy;
+        
+        /**
+         * fast approximate log2(x) from Paul Mineiro <paul@mineiro.com>
+         * 
+         * Taken from 
+         * Piotr's Image&Video Toolbox      Version 3.24
+         * Copyright 2013 Piotr Dollar.  [pdollar-at-caltech.edu]
+         */
+        float flog2( float x ) const
+        {
+            union { float f; uint32_t i; } vx = { x };
+            union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+            float y = float(vx.i); y *= 1.1920928955078125e-7f;
+            return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
+        }
+        
+    public:
+        /**
+         * Default constructor
+         */
+        EfficientEntropyHistogram() : bins(0), histogram(0), mass(0), totalEntropy(0), entropies(0) { }
+        EfficientEntropyHistogram(int _classCount) : bins(_classCount), histogram(0), mass(0), totalEntropy(0), entropies(0) { resize(_classCount); }
+        
+        /**
+         * Copy constructor
+         */
+        EfficientEntropyHistogram(const EfficientEntropyHistogram & other) 
+        {
+            resize (other.bins);
+            for (int i = 0; i < bins; i++)
+            {
+                set(i, other.at(i));
+            }
+            mass = other.mass;
+        }
+        
+        /**
+         * Assignment operator
+         */
+        EfficientEntropyHistogram & operator= (const EfficientEntropyHistogram &other)
+        {
+            // Prevent self assignment
+            if (this != &other)
+            {
+                resize (other.bins);
+                for (int i = 0; i < bins; i++)
+                {
+                    set(i, other.at(i));
+                }
+                mass = other.mass;
+            }
+            return *this;
+        }
+        
+        /**
+         * Destructor
+         */
+        ~EfficientEntropyHistogram()
+        {
+            if (histogram != 0)
+            {
+                delete[] histogram;
+            }
+            if (entropies != 0)
+            {
+                delete[] entropies;
+            }
+        }
+        
+        /**
+         * Resizes the histogram to a certain size
+         */
+        void resize(int _classCount)
+        {
+            // Release the current histogram
+            if (histogram != 0)
+            {
+                delete[] histogram;
+                histogram = 0;
+            }
+            if (entropies != 0)
+            {
+                delete[] entropies;
+                entropies = 0;
+            }
+            
+            // Only allocate a new histogram, if there is more than one class
+            if (_classCount > 0)
+            {
+                histogram = new int[_classCount];
+                entropies = new float[_classCount];
+                bins = _classCount;
+                
+                // Initialize the histogram
+                for (int i = 0; i < bins; i++)
+                {
+                    histogram[i] = 0;
+                    entropies[i] = 0;
+                }
+            }
+        }
+        
+        /**
+         * Returns the size of the histogram (= class count)
+         */
+        int size() const { return bins; }
+        
+        /**
+         * Returns the value of the histogram at a certain position. Caution: For performance reasons, we don't
+         * perform any parameter check!
+         */
+        int at(int i) const { return histogram[i]; }
+        int get(int i) const { return histogram[i]; }
+        void set(int i, int v) { mass -= histogram[i]; mass += v; histogram[i] = v; }
+        void add(int i, int v) { mass += v; histogram[i] += v; }
+        void sub(int i, int v) { mass -= v; histogram[i] -= v; }
+        void addOne(int i)
+        {
+            totalEntropy -= getMass() * flog2(getMass());
+            mass++;
+            totalEntropy += getMass() * flog2(getMass());
+            histogram[i]++;
+            totalEntropy -= entropies[i];
+            entropies[i] = - histogram[i] * flog2(histogram[i]); 
+            totalEntropy += entropies[i];
+        }
+        void subOne(int i)
+        { 
+            totalEntropy -= getMass() * flog2(getMass());
+            mass--; 
+            totalEntropy += getMass() * flog2(getMass());
+            
+            histogram[i]--;
+            totalEntropy -= entropies[i];
+            if (histogram[i] < 1)
+            {
+                entropies[i] = 0;
+            }
+            else
+            {
+                entropies[i] = - histogram[i] * flog2(histogram[i]); 
+            }
+            totalEntropy += entropies[i];
+        }
+        
+        /**
+         * Returns the mass
+         */
+        float getMass() const { return mass; }
+        
+        /**
+         * Calculates the entropy of a histogram
+         * 
+         * @return The calculated entropy
+         */
+        float entropy() const
+        {
+            return totalEntropy;
+        }
+        
+        /**
+         * Initializes all entropies
+         */
+        void initEntropies()
+        {
+            for (int i = 0; i < bins; i++)
+            {
+                if (at(i) == 0) continue;
+                
+                entropies[i] = -at(i) * flog2(at(i));
+                totalEntropy += entropies[i];
+            }
+            totalEntropy += getMass() * flog2(getMass());
+        }
+        
+        /**
+         * Sets all entries in the histogram to 0
+         */
+        void reset()
+        {
+            // Only reset the histogram if there are more than 0 bins
+            if (histogram == 0) return;
+            
+            for (int i = 0; i < bins; i++)
+            {
+                histogram[i] = 0;
+                entropies[i] = 0;
+            }
+            totalEntropy = 0;
             mass = 0;
         }
     };
