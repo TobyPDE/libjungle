@@ -204,20 +204,50 @@ const char* HelpCLIFunction::shortHelp()
 
 int ClassifyCLIFunction::execute()
 {
-    std::cout << "Execute classify" << std::endl;
+    // There must be a model file and a training set
+    if (getArguments()->getArguments().size() != 2)
+    {
+        std::cout << "Please use the command as follows:" << std::endl;
+        std::cout << " $ jungle classify [parameters] {trainingset} {model}" << std::endl;
+        std::cout << "See '$ jugle help classify' for more information." << std::endl;
+        return 1;
+    }
+    
+    // Load the jungle
+    std::cout << "Loading jungle" << std::endl;
+    Jungle::ptr jungle = Jungle::Factory::createFromFile(getArguments()->getArguments().at(1), true);
+    
+    // Load the training set
+    std::cout << "Loading test set" << std::endl;
+    TrainingSet::ptr testSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), true);
+    
+    std::cout << std::endl;
+    
+    // Display some error statistics
+    TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
+    
+    std::cout << "Error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
+    
+    TrainingSet::freeTrainingExamples(testSet);
+    
     return 0;
 }
 
 
 const char* ClassifyCLIFunction::help()
 {
-    return "Long help";
+    return  "USAGE \n"
+            " $ jungle classify [parameters] {traininset} {model} \n\n"
+            "PARAMETERS\n"
+            " There are no parameters for this command\n\n"
+            "DESCRIPTION\n"
+            " This command classifies known data (i.e. a training set).\n";
 }
 
 
 const char* ClassifyCLIFunction::shortHelp()
 {
-    return "Classifies known or unknown data (error statistics, confusion matrix)";
+    return "Classifies known data (error statistics, confusion matrix)";
 }
 
 void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
@@ -271,7 +301,6 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
         }
     }
 }
-TrainingSet::ptr testSet;
 
 int TrainCLIFunction::execute()
 {
@@ -310,8 +339,6 @@ int TrainCLIFunction::execute()
     // Load the training set
     std::cout << "Load training set" << std::endl;
     TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), true);
-    std::cout << "Load test set" << std::endl;
-    testSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(1), true);
     
     std::cout << std::endl;
     
@@ -327,13 +354,11 @@ int TrainCLIFunction::execute()
     TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
     
     std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
-    std::cout << "Test error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
     
     TrainingSet::freeTrainingExamples(trainingSet);
-    TrainingSet::freeTrainingExamples(testSet);
     
     // Save the jungle in a file
-//    jungle->storeInFile(getArguments()->getArguments().at(1));
+    Jungle::Factory::serialize(jungle, getArguments()->getArguments().at(1));
     
     delete jungleTrainer;
     

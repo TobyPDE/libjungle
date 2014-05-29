@@ -220,16 +220,6 @@ namespace decision_jungle {
         ClassHistogram rightHistogram;
         
         /**
-         * Temporary left node assignment. Used during training
-         */
-        int tempLeft;
-        
-        /**
-         * Temporary right node assignment. Used during training
-         */
-        int tempRight;
-        
-        /**
          * Reference to the trainer
          */
         DAGTrainerPtr trainer;
@@ -267,8 +257,6 @@ namespace decision_jungle {
                 // FIXME: The histograms should be copied
                 leftHistogram(other.leftHistogram), 
                 rightHistogram(other.rightHistogram), 
-                tempLeft(other.tempLeft), 
-                tempRight(other.tempRight),
                 pure(false) {}
         
         /**
@@ -282,8 +270,6 @@ namespace decision_jungle {
                 trainingSet = other.trainingSet;
                 leftHistogram = other.leftHistogram;
                 rightHistogram = other.rightHistogram;
-                tempLeft = other.tempLeft;
-                tempRight = other.tempRight;
             }
             
             return *this;
@@ -327,46 +313,6 @@ namespace decision_jungle {
         ClassHistogram* getRightHistogram()
         {
             return & rightHistogram;
-        }
-        
-        /**
-         * Sets the temporary left assignment
-         * 
-         * @param _tempLeft New assignment
-         */
-        void setTempLeft(int _tempLeft)
-        {
-            tempLeft = _tempLeft;
-        }
-        
-        /**
-         * Returns the temporary left assignment
-         * 
-         * @return temporary left assignment
-         */
-        int getTempLeft()
-        {
-            return tempLeft;
-        }
-        
-        /**
-         * Sets the temporary right assignment
-         * 
-         * @param _tempRight New assignment
-         */
-        void setTempRight(int _tempRight)
-        {
-            tempRight = _tempRight;
-        }
-        
-        /**
-         * Returns the temporary right assignment
-         * 
-         * @return temporary right assignment
-         */
-        int getTempRight()
-        {
-            return tempRight;
         }
         
         /**

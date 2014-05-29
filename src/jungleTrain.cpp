@@ -87,9 +87,6 @@ void DAGTrainer::getSampledFeatures(std::vector<int> & sampledFeature)
         sampledFeature.push_back(dist(gen));
     }
 }
-extern TrainingSet::ptr testSet;
-int leafNodeCount;
-int totalNodeCount;
 
 TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeException)
 {
@@ -112,10 +109,6 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
     // The number of child nodes on the next level
     int childNodeCount = 0;
     
-    // Count the total number of nodes and leaf nodes
-    totalNodeCount = 1;
-    leafNodeCount = 0;
-    
     TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
     Jungle::ptr jungle = Jungle::Factory::create();
     jungle->getDAGs().insert(root);
@@ -127,13 +120,12 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
         
         if (getVerboseMode())
         {
-            printf("level: %5d, nodes: %6d\n", level, static_cast<int>(parentNodes.size()));
+            printf("level: %5d, nodes: %6d, training error: %1.6f \n", level, static_cast<int>(parentNodes.size()), statisticsTool->trainingError(jungle, trainingSet));
         }
         
         // Train the level
         parentNodes = trainLevel(parentNodes, childNodeCount);
         
-        printf("%d, %f, %f, %d, %d \n", level, statisticsTool->trainingError(jungle, trainingSet), statisticsTool->trainingError(jungle, testSet), totalNodeCount, leafNodeCount);
         std::cout.flush();
     
         // Stop when there is nothing more to do
@@ -143,8 +135,6 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
         }
     }
     jungle->getDAGs().erase(jungle->getDAGs().begin());
-    
-    std::cout << "nodes: " << totalNodeCount << ", leaves: " << leafNodeCount << std::endl;
     
     return root;
 }
@@ -247,7 +237,6 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     for (int i = 0; i < childNodeCount; i++)
     {
         childNodes[i] = TrainingDAGNode::Factory::create(this);
-        totalNodeCount++;
         noParentNode[i] = true;
     }
 
@@ -433,7 +422,7 @@ bool TrainingDAGNode::findLeftChildNodeAssignment(NodeRow & parentNodes, int chi
     error.initHistograms();
     
     // Save the currently best settings
-    int selectedLeft = tempLeft;
+    int selectedLeft = getTempLeft();
     
     float bestEntropy = error.error();
     float currentEntropy = 0;
@@ -474,7 +463,7 @@ bool TrainingDAGNode::findRightChildNodeAssignment(NodeRow & parentNodes, int ch
     error.initHistograms();
 
     // Save the currently best settings
-    int selectedRight = tempRight;
+    int selectedRight = getTempRight();
     
     float bestEntropy = error.error();
     float currentEntropy = 0;
@@ -515,8 +504,8 @@ bool TrainingDAGNode::findCoherentChildNodeAssignment(NodeRow & parentNodes, int
     error.initHistograms();
     
     // Save the currently best settings
-    int selectedRight = tempRight;
-    int selectedLeft = tempLeft;
+    int selectedRight = getTempRight();
+    int selectedLeft = getTempLeft();
     
     float bestEntropy = error.error();
     float currentEntropy = 0;
@@ -599,6 +588,7 @@ TrainingSet::ptr TrainingSet::Factory::createFromFile(const std::string & _fileN
     // Count the number of lines in order to display the progress bar
     std::ifstream countFile(_fileName); 
     int lineCount = std::count(std::istreambuf_iterator<char>(countFile), std::istreambuf_iterator<char>(), '\n');
+    countFile.close();
     
     ProgressBar::ptr progressBar = ProgressBar::Factory::create(lineCount);
     
@@ -624,6 +614,8 @@ TrainingSet::ptr TrainingSet::Factory::createFromFile(const std::string & _fileN
         TrainingExample::ptr example = TrainingExample::Factory::createFromFileRow(row);
         trainingSet->push_back(example);
     }
+    
+    in.close();
     
     return trainingSet;
 }
@@ -720,7 +712,6 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
             {
                 std::cout << "DAG completed\n";
                 std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
-                std::cout << "Test error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
                 std::cout << "----------------------------\n";
             }
         }
