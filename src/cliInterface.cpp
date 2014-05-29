@@ -431,6 +431,9 @@ int VersionCLIFunction::execute()
     std::cout << "Copyright (c) 2014 Tobias Pohlen <tobias.pohlen@rwth-aachen.de>." << std::endl;
     std::cout << "All rights reserved." << std::endl;
     std::cout << "Released under the GPL licence." << std::endl;
+    std::cout << std::endl;
+    std::cout << "Fast log2 approximation Copyright (C) 2011 Paul Mineiro." << std::endl;
+    std::cout << "Further information under: https://code.google.com/p/fastapprox/" << std::endl;
     return 0;
 }
 
