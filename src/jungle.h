@@ -9,6 +9,7 @@
 #define JUNGLE_H
 
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <vector>
 #include <set>
@@ -150,7 +151,7 @@ namespace decision_jungle
          * Piotr's Image&Video Toolbox      Version 3.24
          * Copyright 2013 Piotr Dollar.  [pdollar-at-caltech.edu]
          */
-        float flog2( float x ) const
+        static float flog2( float x )
         {
             union { float f; uint32_t i; } vx = { x };
             union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
@@ -408,7 +409,7 @@ namespace decision_jungle
          * Piotr's Image&Video Toolbox      Version 3.24
          * Copyright 2013 Piotr Dollar.  [pdollar-at-caltech.edu]
          */
-        float flog2( float x ) const
+        static float flog2( float x )
         {
             union { float f; uint32_t i; } vx = { x };
             union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
@@ -723,6 +724,16 @@ namespace decision_jungle
         ptr right;
         
         /**
+         * Temporary left node assignment. Used during training and model loading
+         */
+        int tempLeft;
+        
+        /**
+         * Temporary right node assignment. Used during training and model loading
+         */
+        int tempRight;
+        
+        /**
          * Assigned class label for this node
          */
         ClassLabel classLabel;
@@ -731,6 +742,11 @@ namespace decision_jungle
          * Class histogram for this node
          */
         ClassHistogram classHistogram;
+        
+        /**
+         * The ID of this node. This is used in order to serialize nodes
+         */
+        int ID;
         
         /**
          * Initializes all parameters
@@ -903,6 +919,62 @@ namespace decision_jungle
         }
     
         /**
+         * Returns the node ID
+         */
+        int getID() const
+        {
+            return ID;
+        }
+        
+        /**
+         * Sets the node ID
+         */
+        void setID(int _ID)
+        {
+            ID = _ID;
+        }
+                
+        /**
+         * Sets the temporary left assignment
+         * 
+         * @param _tempLeft New assignment
+         */
+        void setTempLeft(int _tempLeft)
+        {
+            tempLeft = _tempLeft;
+        }
+        
+        /**
+         * Returns the temporary left assignment
+         * 
+         * @return temporary left assignment
+         */
+        int getTempLeft()
+        {
+            return tempLeft;
+        }
+        
+        /**
+         * Sets the temporary right assignment
+         * 
+         * @param _tempRight New assignment
+         */
+        void setTempRight(int _tempRight)
+        {
+            tempRight = _tempRight;
+        }
+        
+        /**
+         * Returns the temporary right assignment
+         * 
+         * @return temporary right assignment
+         */
+        int getTempRight()
+        {
+            return tempRight;
+        }
+        
+        /**
          * This is only for debug purposes
          */
         void traverse()
@@ -950,6 +1022,16 @@ namespace decision_jungle
                 
                 return node;
             }
+            
+            /**
+             * Serializes a node in order to save it to a file
+             */
+            static void serialize(DAGNode::ptr node, bool isRoot, std::ofstream & outfile);
+            
+            /**
+             * Unserializes a node from a model file
+             */
+            static DAGNode::ptr unserialize(const std::vector<std::string> & row);
         };        
     };
     
@@ -1007,7 +1089,67 @@ namespace decision_jungle
             {
                 return Jungle::ptr(new Jungle);
             }
+            
+            /**
+             * Serializes the complete jungle in order to save it to a file
+             */
+            static void serialize(Jungle::ptr jungle, const std::string & filename)
+            {
+                // Open the file
+                std::ofstream outfile(filename);
+                
+                // Did we open the file successfully?
+                if (!outfile.is_open())
+                {
+                    throw RuntimeException("Could not open model file.");
+                    return;
+                }
+                
+                // Give all nodes an ID
+                int ID = 1;
+                for (std::set<DAGNode::ptr>::iterator it = jungle->dags.begin(); it != jungle->dags.end(); ++it)
+                {
+                    // Put all nodes into a set and then iterate over the set to delete all nodes
+                    std::vector<DAGNode::ptr> queue;
+                    std::set<DAGNode::ptr> nodeSet;
+
+                    // Start with the root node
+                    queue.push_back(*it);
+                    DAGNode::ptr current = 0;
+
+                    while (queue.size() > 0)
+                    {
+                        current = queue.back();
+                        queue.pop_back();
+
+                        if (nodeSet.find(current) != nodeSet.end()) continue;
+
+                        nodeSet.insert(current);
+                        current->setID(ID++);
+
+                        if (current->getLeft() != 0)
+                        {
+                            queue.push_back(current->getLeft());
+                            queue.push_back(current->getRight());
+                        }
+                    }
+                    
+                    // Save all the nodes
+                    for (std::set<DAGNode::ptr>::iterator nodeIt = nodeSet.begin(); nodeIt != nodeSet.end(); ++nodeIt)
+                    {
+                        DAGNode::Factory::serialize(*nodeIt, *nodeIt == *it, outfile);
+                    }
+                }
+                
+                outfile.close();
+            }
+            
+            /**
+             * Loads a jungle from a model file
+             */
+            static Jungle::ptr createFromFile(const std::string & filename, bool);
         };
+        friend class Jungle::Factory;
     };
     
     /**
