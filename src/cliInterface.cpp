@@ -307,13 +307,15 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
                 break;
         }
         
+        validationLevel = std::max(std::abs(validationLevel), 0);
+        validationLevel = std::min(validationLevel, 3);
+        
         // If there is a validation set, the validation level should be at least 1
         if (validationSetFileName.size() > 0)
         {
             validationLevel = std::max(std::abs(validationLevel), 1);
-            validationLevel = std::min(validationLevel, 3);
-            _trainer->setValidationLevel(validationLevel);
         }
+        _trainer->setValidationLevel(validationLevel);
     }
 }
 
@@ -357,7 +359,7 @@ int TrainCLIFunction::execute()
     TrainingSet::ptr testSet;
     
     // If there is a validation set, load it
-    if (validationLevel > 0)
+    if (validationLevel > 0 && validationSetFileName != "")
     {
         std::cout << "Loading validation set" << std::endl;
         testSet = TrainingSet::Factory::createFromFile(validationSetFileName, false);
@@ -379,7 +381,7 @@ int TrainCLIFunction::execute()
     
     std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
     
-    if (validationLevel > 0)
+    if (validationLevel > 0 && testSet)
     {
         std::cout << "Test error: " << statisticsTool->trainingError(jungle, testSet) << std::endl;
         TrainingSet::freeTrainingExamples(testSet);

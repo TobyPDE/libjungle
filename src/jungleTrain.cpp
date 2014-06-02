@@ -43,7 +43,7 @@ void DAGTrainer::validateParameters() throw(ConfigurationException)
     
     for (TrainingSet::iterator iter = trainingSet->begin(); iter != trainingSet->end(); ++iter)
     {
-        if ((*iter)->getDataPoint()->size() != featureDimension)
+        if (static_cast<int>((*iter)->getDataPoint()->size()) != featureDimension)
         {
             throw ConfigurationException("All data points must have the same feature dimension.");
         }
@@ -125,7 +125,14 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
         {
             if (getValidationLevel() >= 3)
             {
-                printf("level: %5d, nodes: %6d, training error: %1.6f, test error: %1.6f \n", level, static_cast<int>(parentNodes.size()), statisticsTool->trainingError(jungle, trainingSet), statisticsTool->trainingError(jungle, getValidationSet()));
+                if (getValidationSet())
+                {
+                    printf("level: %5d, nodes: %6d, training error: %1.6f, test error: %1.6f \n", level, static_cast<int>(parentNodes.size()), statisticsTool->trainingError(jungle, trainingSet), statisticsTool->trainingError(jungle, getValidationSet()));
+                }
+                else
+                {
+                    printf("level: %5d, nodes: %6d, training error: %1.6f\n", level, static_cast<int>(parentNodes.size()), statisticsTool->trainingError(jungle, trainingSet));
+                }
                 std::cout.flush();
             }
         }
@@ -659,7 +666,6 @@ void AbstractTrainer::Factory::init(AbstractTrainer::ptr _trainer)
     _trainer->useStochasticThreshold = false;
     _trainer->useStochasticChildNodeAssignment = false;
     _trainer->validationLevel = 0;
-    _trainer->validationSet = 0;
     // -1 means that the number of features to sample will be determined automatically
     _trainer->numFeatureSamples = -1;
 }
@@ -725,7 +731,7 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
             {
                 std::cout << "DAG completed\n";
                 std::cout << "Training error: " << statisticsTool->trainingError(jungle, trainingSet) << std::endl;
-                if (getValidationLevel() >= 2)
+                if (getValidationLevel() >= 2 && getValidationSet())
                 {
                     std::cout << "Test error: " << statisticsTool->trainingError(jungle, getValidationSet()) << std::endl;
                 }

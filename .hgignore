@@ -1,7 +1,6 @@
 syntax: glob
 training_data/*
 build/*
-experiment*
 .DS_Store
 config.h
 jungle
