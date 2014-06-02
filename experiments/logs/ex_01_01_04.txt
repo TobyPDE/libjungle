@@ -1,0 +1,81 @@
+Settings dump:
+numFeatureSamples -1
+maxDepth 256
+maxWidth 128
+useBagging 0
+maxLevelIterations 5
+useStochasticThreshold 0
+useStochasticChildNodeAssignment 0
+numDAGs 1
+numTrainingSamples -1
+
+Loading training set
+Loading validation set
+
+Start training
+Number of training examples: 60000
+Number of DAGs to train: 1
+Train DAG 1/1
+level:     1, nodes:      2, training error: 0.803967, test error: 0.803600 
+level:     2, nodes:      4, training error: 0.690217, test error: 0.684300 
+level:     3, nodes:      8, training error: 0.573650, test error: 0.569100 
+level:     4, nodes:     16, training error: 0.487950, test error: 0.475200 
+level:     5, nodes:     32, training error: 0.397783, test error: 0.393500 
+level:     6, nodes:     64, training error: 0.340967, test error: 0.340100 
+level:     7, nodes:    128, training error: 0.287583, test error: 0.300500 
+level:     8, nodes:    128, training error: 0.236600, test error: 0.250600 
+level:     9, nodes:    128, training error: 0.198817, test error: 0.216800 
+level:    10, nodes:    128, training error: 0.175967, test error: 0.195100 
+level:    11, nodes:    128, training error: 0.157783, test error: 0.180800 
+level:    12, nodes:    128, training error: 0.142433, test error: 0.169400 
+level:    13, nodes:    128, training error: 0.130767, test error: 0.158200 
+level:    14, nodes:    128, training error: 0.122583, test error: 0.155100 
+level:    15, nodes:    128, training error: 0.112950, test error: 0.151900 
+level:    16, nodes:    128, training error: 0.106367, test error: 0.146700 
+level:    17, nodes:    128, training error: 0.100517, test error: 0.145500 
+level:    18, nodes:    128, training error: 0.094350, test error: 0.142200 
+level:    19, nodes:    128, training error: 0.089883, test error: 0.140700 
+level:    20, nodes:    128, training error: 0.084950, test error: 0.137700 
+level:    21, nodes:    128, training error: 0.080900, test error: 0.136600 
+level:    22, nodes:    128, training error: 0.076783, test error: 0.136300 
+level:    23, nodes:    128, training error: 0.072200, test error: 0.131800 
+level:    24, nodes:    128, training error: 0.068333, test error: 0.130600 
+level:    25, nodes:    128, training error: 0.063383, test error: 0.130100 
+level:    26, nodes:    128, training error: 0.060400, test error: 0.128900 
+level:    27, nodes:    128, training error: 0.056967, test error: 0.130300 
+level:    28, nodes:    128, training error: 0.053083, test error: 0.129400 
+level:    29, nodes:    128, training error: 0.049850, test error: 0.128000 
+level:    30, nodes:    128, training error: 0.046000, test error: 0.127100 
+level:    31, nodes:    128, training error: 0.042533, test error: 0.127300 
+level:    32, nodes:    128, training error: 0.038550, test error: 0.126900 
+level:    33, nodes:    128, training error: 0.035317, test error: 0.126100 
+level:    34, nodes:    128, training error: 0.032900, test error: 0.126200 
+level:    35, nodes:    128, training error: 0.029933, test error: 0.126000 
+level:    36, nodes:    128, training error: 0.027183, test error: 0.126500 
+level:    37, nodes:    128, training error: 0.024533, test error: 0.127300 
+level:    38, nodes:    128, training error: 0.021600, test error: 0.126200 
+level:    39, nodes:    128, training error: 0.018650, test error: 0.127000 
+level:    40, nodes:    128, training error: 0.015217, test error: 0.125700 
+level:    41, nodes:    128, training error: 0.012500, test error: 0.125400 
+level:    42, nodes:    128, training error: 0.010150, test error: 0.127000 
+level:    43, nodes:    128, training error: 0.007917, test error: 0.126600 
+level:    44, nodes:    128, training error: 0.006150, test error: 0.126900 
+level:    45, nodes:    127, training error: 0.004483, test error: 0.126900 
+level:    46, nodes:    126, training error: 0.003267, test error: 0.126900 
+level:    47, nodes:    124, training error: 0.002333, test error: 0.127300 
+level:    48, nodes:    123, training error: 0.001383, test error: 0.126900 
+level:    49, nodes:    113, training error: 0.000850, test error: 0.127200 
+level:    50, nodes:    105, training error: 0.000333, test error: 0.127200 
+level:    51, nodes:     84, training error: 0.000150, test error: 0.127500 
+level:    52, nodes:     72, training error: 0.000033, test error: 0.127400 
+level:    53, nodes:     64, training error: 0.000017, test error: 0.127400 
+level:    54, nodes:     65, training error: 0.000000, test error: 0.127400 
+level:    55, nodes:      0, training error: 0.000000, test error: 0.127400 
+DAG completed
+Training error: 0
+Test error: 0.1274
+----------------------------
+Training time: 107.72s
+
+Training error: 0
+Test error: 0.1274
