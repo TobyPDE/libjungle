@@ -867,6 +867,11 @@ namespace decision_jungle
         PredictionResult::ptr predict(DataPoint::ptr featureVector) const;
         
         /**
+         * Returns the leaf node, the training example x ends up in
+         */
+        const DAGNode* getLeafNode(DataPoint::ptr featureVector) const;
+        
+        /**
          * Returns the class label
          * 
          * @return the class label for this node
@@ -1228,12 +1233,12 @@ namespace decision_jungle
                 progress = _state/static_cast<float>(total);
             }
                 
-            if (static_cast<int>(progress*width) == _lastUpperBound && _lastUpperBound > 0)
+            if (static_cast<int>(std::floor(progress*width)) == _lastUpperBound && _lastUpperBound > 0)
             {
                 return;
             }
 
-            _lastUpperBound = static_cast<int>(progress*width);
+            _lastUpperBound = static_cast<int>(std::floor(progress*width));
 
             printf("\r[");
             for (int j = 0; j < width; j++)

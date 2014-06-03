@@ -10,30 +10,37 @@ using namespace decision_jungle;
 
 PredictionResult::ptr DAGNode::predict(DataPoint::ptr featureVector) const
 {
+    // Get the leaf node
+    const DAGNode* leafNode = getLeafNode(featureVector);
+    
+    // Compute the relative confidence
+    if (leafNode->getClassHistogram()->getMass() > 0)
+    {
+        return PredictionResult::Factory::create(leafNode->getClassLabel(), leafNode->getClassHistogram()->at(leafNode->getClassLabel())/leafNode->getClassHistogram()->getMass());
+    }
+    else
+    {
+        return PredictionResult::Factory::create(leafNode->getClassLabel(), 0);
+    }
+}
+
+const DAGNode* DAGNode::getLeafNode(DataPoint::ptr featureVector) const
+{
     // Does this node have child nodes?
     if (!left)
     {
-        // Nope, return the class label
-        
-        // Compute the relative confidence
-        if (classHistogram.getMass() > 0)
-        {
-            return PredictionResult::Factory::create(getClassLabel(), classHistogram.at(getClassLabel())/classHistogram.getMass());
-        }
-        else
-        {
-            return PredictionResult::Factory::create(getClassLabel(), 0);
-        }
+        // Nope, this is a leaf node
+        return this;
     }
     else
     {
         if (featureVector->at(featureID) <= threshold)
         {
-            return left->predict(featureVector);
+            return left->getLeafNode(featureVector);
         }
         else
         {
-            return right->predict(featureVector);
+            return right->getLeafNode(featureVector);
         }
     }
 }
@@ -42,28 +49,38 @@ PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
 {
     // Use a majority vote
     std::map<ClassLabel, float> votes;
-    PredictionResult::ptr prediction;
     
     for (std::set<DAGNode::ptr>::iterator it = dags.begin(); it != dags.end(); ++it)
     {
-        prediction = (*it)->predict(featureVector);
-        // Did we already encounter this class?
-        if (votes.find(prediction->getClassLabel()) != votes.end())
+        const DAGNode* leafNode = (*it)->getLeafNode(featureVector);
+        const ClassHistogram* hist = leafNode->getClassHistogram();
+        
+        int i = leafNode->getClassLabel();
         {
-            votes[prediction->getClassLabel()] = votes[prediction->getClassLabel()] + prediction->getConfidence();
-        }
-        else
-        {
-            votes[prediction->getClassLabel()] = prediction->getConfidence();
+            // If this class has no relevance, don't cast any votes
+            if (hist->at(i) <= 0) continue;
+            
+            // Did we already encounter this class?
+            if (votes.find(i) != votes.end())
+            {
+                votes[i] = votes[i] + 1;
+            }
+            else
+            {
+                votes[i] = 1;
+            }
         }
     }
     
     // Find the best class
     float bestScore = 0;
+    float scoreSum = 0;
     ClassLabel bestLabel = -1;
     
     for (std::map<ClassLabel, float>::iterator it = votes.begin(); it != votes.end(); ++it)
     {
+        scoreSum += it->second;
+       
         if (it->second > bestScore)
         {
             bestScore = it->second;
@@ -71,7 +88,7 @@ PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
         }
     }
     
-    return PredictionResult::Factory::create(bestLabel);
+    return PredictionResult::Factory::create(bestLabel, bestScore/scoreSum);
 }
 
 DataPoint::ptr DataPoint::Factory::createFromFileRow(const std::vector<std::string> & _row)
@@ -287,7 +304,7 @@ DAGNode::ptr DAGNode::Factory::unserialize(const std::vector<std::string> & row)
         std::vector<int> histogram;
         std::string h = row[7];
         int last = 0;
-        for (int i = 0; i < h.size(); i++)
+        for (std::vector<int>::size_type i = 0; i < h.size(); i++)
         {
             if (h[i] == ',')
             {
@@ -302,7 +319,7 @@ DAGNode::ptr DAGNode::Factory::unserialize(const std::vector<std::string> & row)
         // Add the values to the node histogram
         node->getClassHistogram()->resize(histogram.size());
         
-        for (int i = 0; i < histogram.size(); i++)
+        for (std::vector<int>::size_type i = 0; i < histogram.size(); i++)
         {
             node->getClassHistogram()->set(i, histogram[i]);
         }
