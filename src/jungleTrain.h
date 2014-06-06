@@ -419,6 +419,12 @@ namespace JunglePP {
         int validationLevel;
         
         /**
+         * Whether or not the parent nodes shall be sorted according to their
+         * entropy
+         */
+        bool sortParentNodes;
+        
+        /**
          * The validation set
          */
         TrainingSet::ptr validationSet;
@@ -434,6 +440,22 @@ namespace JunglePP {
     public:
         typedef AbstractTrainer self;
         typedef self* ptr;
+        
+        /**
+         * Sets sortParentNodes
+         */
+        void setSortParentNodes(bool _sortParentNodes)
+        {
+            sortParentNodes = _sortParentNodes;
+        }
+        
+        /**
+         * Returns sortParentNodes
+         */
+        bool getSortParentNodes()
+        {
+            return sortParentNodes;
+        }
         
         /**
          * Sets validationLevel

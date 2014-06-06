@@ -76,7 +76,7 @@ modification, are permitted provided that the following conditions are met:
     * The names of its contributors may not be used to endorse or promote products
       derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL TOBIAS POHLEN BE LIABLE FOR ANY
@@ -90,9 +90,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Fast log2 approximation (sse.h, fastlog.h) Copyright (C) 2011 Paul Mineiro.
 Further information under: https://code.google.com/p/fastapprox/
 
-## Disclaimer
-
-THIS CODE IS PROVIDED "AS IS" AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. Use at your own risk.
 
 ## Miscellaneous
 Please cite the code as follows, if you use it in a publication:
@@ -105,5 +102,5 @@ Please cite the code as follows, if you use it in a publication:
 ```
 
 ## References:
-[1] Jamie Shotton, Toby Sharp, Pushmeet Kohli, Sebastian Nowozin, John Winn, and Antonio Criminisi, "Decision jungles: Compact and rich models for classification". In C.J.C. Burges, L. Botou, M. Welling, Z. Ghahramani, and K.Q. Weinberger, editors, Advances in Neural Information Processing Systems 26, pages 234-242. Curran Associates, Inc., 2013.
-[2] Tobias Pohlen, "Decision Jungles". RWTH Aachen University. Aachen, Germany.
+- [1] Jamie Shotton, Toby Sharp, Pushmeet Kohli, Sebastian Nowozin, John Winn, and Antonio Criminisi, "Decision jungles: Compact and rich models for classification". In C.J.C. Burges, L. Botou, M. Welling, Z. Ghahramani, and K.Q. Weinberger, editors, Advances in Neural Information Processing Systems 26, pages 234-242. Curran Associates, Inc., 2013.
+- [2] Tobias Pohlen, "Decision Jungles". RWTH Aachen University. Aachen, Germany.
