@@ -96,13 +96,13 @@ THIS CODE IS PROVIDED "AS IS" AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INC
 
 ## Miscellaneous
 Please cite the code as follows, if you use it in a publication:
-``
+```
 @misc{TPDJ, 
    author = {Tobias Pohlen}, 
    title = {Jungle++ Decision Jungle Library}, 
    howpublished = {\url{https://bitbucket.org/geekStack/jungle}} 
 } 
-``
+```
 
 ## References:
 [1] Jamie Shotton, Toby Sharp, Pushmeet Kohli, Sebastian Nowozin, John Winn, and Antonio Criminisi, "Decision jungles: Compact and rich models for classification". In C.J.C. Burges, L. Botou, M. Welling, Z. Ghahramani, and K.Q. Weinberger, editors, Advances in Neural Information Processing Systems 26, pages 234-242. Curran Associates, Inc., 2013.
