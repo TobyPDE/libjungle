@@ -7,10 +7,11 @@
 #include <algorithm>
 #include <random>
 #include <set>
-#include "jungleTrain.h"
-#include <boost/tokenizer.hpp>
 #include <cstdlib>
-#if OMP_H
+#include <boost/tokenizer.hpp>
+#include "jungleTrain.h"
+#include "config.h"
+#if DecisionJungle_USE_OPEN_MPI
     #include "omp.h"
 #endif
 
@@ -419,7 +420,6 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
             }
         }
     }
-    
     // Restore the arg min settings
     setFeatureID(bestFeatureID);
     setThreshold(bestThreshold);

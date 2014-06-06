@@ -4,6 +4,6 @@
 
 #define VERSION_MAJOR @DecisionJungle_VERSION_MAJOR@
 #define VERSION_MINOR @DecisionJungle_VERSION_MINOR@
-
+#define USE_OPEN_MPI @DecisionJungle_USE_OPEN_MPI@
 #endif
 
