@@ -1025,7 +1025,6 @@ namespace decision_jungle {
         }
     };
 
-#ifndef FAST_LOG
     /**
      * Calculates the entropy error based on a child row
      */
@@ -1186,164 +1185,6 @@ namespace decision_jungle {
             return  1/(cleftHistogram.getMass() + crightHistogram.getMass()) * (cleftHistogram.entropy() + crightHistogram.entropy());
         }
     };
-#else
-
-    /**
-     * Calculates the entropy error based on a child row
-     */
-    class ThresholdEntropyErrorFunction {
-    private:
-        /**
-         * The row of nodes
-         */
-        NodeRow & row;
-        /**
-         * The parent node that we optimize
-         */
-        TrainingDAGNode::ptr parent;
-        /**
-         * The left histogram base
-         */
-        ClassHistogram leftHistogram;
-        /**
-         * The left histogram base
-         */
-        ClassHistogram rightHistogram;
-        /**
-         * Left/right data count
-         */
-        ClassHistogram cleftHistogram;
-        ClassHistogram crightHistogram;
-        
-    public:
-        /**
-         * Default constructor
-         * @return 
-         */
-        ThresholdEntropyErrorFunction (NodeRow & _row, TrainingDAGNode::ptr parent) : row(_row), parent(parent) {}
-        
-        /**
-         * Copy constructor
-         */
-        ThresholdEntropyErrorFunction (const ThresholdEntropyErrorFunction & other) : row(other.row), parent(other.parent) {
-        }
-        
-        /**
-         * Assignment operator
-         */
-        ThresholdEntropyErrorFunction & operator=(const ThresholdEntropyErrorFunction & other)
-        {
-            // Prevent self assignment
-            if (this != &other)
-            {
-                row = other.row;
-                parent = other.parent;
-            }
-            return *this;
-        }
-        
-        /**
-         * Destructor
-         */
-        virtual ~ThresholdEntropyErrorFunction() {
-        }
-        
-        /**
-         * Initializes the left/right histogram
-         */
-        void initHistograms()
-        {
-            int classCount = (*row.begin())->getClassHistogram()->size();
-
-            leftHistogram.resize(classCount);
-            rightHistogram.resize(classCount);
-            cleftHistogram.resize(classCount);
-            crightHistogram.resize(classCount);
-
-            // Compute the histograms for all child nodes
-            for (NodeRow::iterator it = row.begin(); it != row.end(); ++it)
-            {
-                // Skip the parent node
-                if (*it == parent) continue;
-
-                int leftNode = (*it)->getTempLeft();
-                int rightNode = (*it)->getTempRight();
-                ClassHistogram* _leftHistogram = (*it)->getLeftHistogram();
-                ClassHistogram* _rightHistogram = (*it)->getRightHistogram();
-
-                if (leftNode == parent->getTempLeft())
-                {
-                    // Add the values to the histogram
-                    for (int i = 0; i < classCount; i++)
-                    {
-                        leftHistogram.add(i, _leftHistogram->at(i));
-                    }
-                }
-                if (leftNode == parent->getTempRight())
-                {
-                    // Add the values to the histogram
-                    for (int i = 0; i < classCount; i++)
-                    {
-                        rightHistogram.add(i, _leftHistogram->at(i));
-                    }
-                }
-
-                if (rightNode == parent->getTempLeft())
-                {
-                    // Add the values to the histogram
-                    for (int i = 0; i < classCount; i++)
-                    {
-                        leftHistogram.add(i, _rightHistogram->at(i));
-                    }
-                }
-                if (leftNode == parent->getTempRight())
-                {
-                    // Add the values to the histogram
-                    for (int i = 0; i < classCount; i++)
-                    {
-                        rightHistogram.add(i, _rightHistogram->at(i));
-                    }
-                }
-            }
-        }
-        
-        /**
-         * Resets the current left and right histograms
-         */
-        void resetHistograms()
-        {
-            // Initialize the histograms
-            for (int i = 0; i < leftHistogram.size(); i++)
-            {
-                cleftHistogram.set(i, leftHistogram.at(i));
-                crightHistogram.set(i, rightHistogram.at(i) + parent->getClassHistogram()->at(i));
-            }
-        }
-        
-        /**
-         * Moves one training example from the right to the left histogram
-         */
-        void move(int classLabel)
-        {
-            cleftHistogram.addOne(classLabel);
-            crightHistogram.subOne(classLabel);
-        }
-        
-        /**
-         * Calculates the error if we split. This function expects the local histograms to be already computed.
-         */
-        float error() 
-        {
-            float result = 0.;
-            
-            float dataCount = cleftHistogram.getMass() + crightHistogram.getMass();
-            result = cleftHistogram.getMass()/dataCount * cleftHistogram.entropy();
-            result += crightHistogram.getMass()/dataCount * crightHistogram.entropy();
-
-            return result;
-        }
-    };
-#endif
     
     /**
      * Calculates the entropy error based on a child row
@@ -1490,7 +1331,6 @@ namespace decision_jungle {
         }
     };
 
-    
     /**
      * This comparator class allows us to sort a training set according to one feature dimension. 
      */

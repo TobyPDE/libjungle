@@ -282,11 +282,16 @@ Jungle::ptr Jungle::Factory::createFromFile(const std::string& _filename, bool _
 
 DAGNode::ptr DAGNode::Factory::unserialize(const std::vector<std::string> & row)
 {
+    // There must be exactly 8 entries in the vector. Otherwise the model is corrupt
+    if (row.size() != 8)
+    {
+        throw RuntimeException("Invalid model row.");
+    }
+    
     // Row structure
     // 0         1         2            3            4                5                 6              7 
     // [nodeID], [isRoot], [featureID], [threshold], [left child ID], [right child ID], [class label], "[class histogram]"
     // The first two entries don't matter here
-    
     DAGNode::ptr node = DAGNode::Factory::create(0);
     
     node->setFeatureID(atoi(row[2].c_str()));

@@ -8,9 +8,12 @@ configure_file (
   "${PROJECT_SOURCE_DIR}/src/config.h"
 )
 target_link_libraries( lib_jungle ${Boost_LIBRARIES} )
-add_definitions ( -std=c++0x -O3 -Wall )
+add_definitions ( -std=c++0x -O3 -Wall)
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (DecisionJungle_USE_OPEN_MPI 1)
+else()
+    set (DecisionJungle_USE_OPEN_MPI 0)
 endif()
