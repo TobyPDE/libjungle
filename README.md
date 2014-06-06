@@ -12,7 +12,7 @@ the following tools installed
 Execute the following commands in your shell in order to download and compile the
 tool:
 ```shell
-$ hg clone https://bitbucket.org/geekStack/decision-jungles
+$ hg clone https://bitbucket.org/geekStack/jungle
 # Change to the code directory
 $ cd decision-jungles
 # We don't want to have objects files mixed with source files in one directory
@@ -100,7 +100,7 @@ Please cite the code as follows, if you use it in a publication:
 @misc{TPDJ, 
    author = {Tobias Pohlen}, 
    title = {Jungle++ Decision Jungle Library}, 
-   howpublished = {\url{https://bitbucket.org/geekStack/decision-jungles}} 
+   howpublished = {\url{https://bitbucket.org/geekStack/jungle}} 
 } 
 ``
 
