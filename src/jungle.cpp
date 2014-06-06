@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include "jungle.h"
 
-using namespace decision_jungle;
+using namespace JunglePP;
 
 PredictionResult::ptr DAGNode::predict(DataPoint::ptr featureVector) const
 {

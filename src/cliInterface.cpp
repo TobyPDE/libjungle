@@ -17,7 +17,7 @@
 #include <boost/timer.hpp>
 
 
-using namespace decision_jungle;
+using namespace JunglePP;
 
 /**
  * Register all available functions
@@ -429,12 +429,34 @@ const char* TrainCLIFunction::shortHelp()
 
 int VersionCLIFunction::execute()
 {
-    std::cout << "Version: " << VERSION_MAJOR << "." << VERSION_MINOR << std::endl;
-    std::cout << "Copyright (c) 2014 Tobias Pohlen <tobias.pohlen@rwth-aachen.de>." << std::endl;
-    std::cout << "All rights reserved." << std::endl;
-    std::cout << "Released under the GPL licence." << std::endl;
+    std::cout << "Everything except sse.h and fastlog.h is licensed under the following BSD license:" << std::endl;
     std::cout << std::endl;
-    std::cout << "Fast log2 approximation Copyright (C) 2011 Paul Mineiro." << std::endl;
+    std::cout << "Copyright (c) 2014, Tobias Pohlen <tobias.pohlen@rwth-aachen.de>" << std::endl;
+    std::cout << "All rights reserved." << std::endl;
+    std::cout << std::endl;
+    std::cout << "Redistribution and use in source and binary forms, with or without" << std::endl;
+    std::cout << "modification, are permitted provided that the following conditions are met:" << std::endl;
+    std::cout << "    * Redistributions of source code must retain the above copyright" << std::endl;
+    std::cout << "      notice, this list of conditions and the following disclaimer." << std::endl;
+    std::cout << "    * Redistributions in binary form must reproduce the above copyright" << std::endl;
+    std::cout << "      notice, this list of conditions and the following disclaimer in the" << std::endl;
+    std::cout << "      documentation and/or other materials provided with the distribution." << std::endl;
+    std::cout << "    * The names of its contributors may not be used to endorse or promote products" << std::endl;
+    std::cout << "      derived from this software without specific prior written permission." << std::endl;
+    std::cout << std::endl;
+    std::cout << "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND" << std::endl;
+    std::cout << "ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED" << std::endl;
+    std::cout << "WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE" << std::endl;
+    std::cout << "DISCLAIMED. IN NO EVENT SHALL TOBIAS POHLEN BE LIABLE FOR ANY" << std::endl;
+    std::cout << "DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES" << std::endl;
+    std::cout << "(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;" << std::endl;
+    std::cout << "LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND" << std::endl;
+    std::cout << "ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT" << std::endl;
+    std::cout << "(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS" << std::endl;
+    std::cout << "SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE." << std::endl;
+        
+    std::cout << std::endl;
+    std::cout << "Fast log2 approximation (sse.h, fastlog.h) Copyright (C) 2011 Paul Mineiro." << std::endl;
     std::cout << "Further information under: https://code.google.com/p/fastapprox/" << std::endl;
     return 0;
 }
