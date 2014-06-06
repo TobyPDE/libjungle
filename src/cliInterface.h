@@ -19,7 +19,7 @@
 #include <cstdlib>
 
 
-namespace decision_jungle {
+namespace JunglePP {
     /**
      * Forward declarations
      */

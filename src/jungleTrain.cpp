@@ -15,7 +15,7 @@
     #include "omp.h"
 #endif
 
-using namespace decision_jungle;
+using namespace JunglePP;
 
 void AbstractTrainer::validateParameters() throw(ConfigurationException)
 {

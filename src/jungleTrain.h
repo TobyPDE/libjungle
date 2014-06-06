@@ -16,7 +16,7 @@
  * @author Tobias Pohlen <tobias.pohlen@rwth-aachen.de>
  * @version 1.0
  */
-namespace decision_jungle {
+namespace JunglePP {
     
     /**
      * Forward declarations
