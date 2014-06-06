@@ -154,13 +154,16 @@ TrainingDAGNode::ptr DAGTrainer::train() throw(ConfigurationException, RuntimeEx
 NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
 {
     // Sort the parent nodes decreasing by their entropy
-    NodeEntropyComparator compare;
-    std::sort(parentNodes.begin(), parentNodes.end(), compare);
+    if (getSortParentNodes())
+    {
+        NodeEntropyComparator compare;
+        std::sort(parentNodes.begin(), parentNodes.end(), compare);
+    }
     
     // Initialize the parent level
     // We need a counter in order to assign the parent to some virtual children
     int vChildren = 0;
-    for (NodeRow::reverse_iterator iter = parentNodes.rbegin(); iter != parentNodes.rend(); ++iter)
+    for (NodeRow::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
     {
         (*iter)->setThreshold(0);
         (*iter)->setFeatureID(0);
@@ -651,6 +654,7 @@ DAGTrainer::ptr DAGTrainer::Factory::createFromJungleTrainer(JungleTrainer::ptr 
     result->setUseStochasticChildNodeAssignment(_jungleTrainer->getUseStochasticChildNodeAssignment());
     result->setValidationLevel(_jungleTrainer->getValidationLevel());
     result->setValidationSet(_jungleTrainer->getValidationSet());
+    result->setSortParentNodes(_jungleTrainer->getSortParentNodes());
     
     return result;
 }
@@ -668,6 +672,7 @@ void AbstractTrainer::Factory::init(AbstractTrainer::ptr _trainer)
     _trainer->validationLevel = 0;
     // -1 means that the number of features to sample will be determined automatically
     _trainer->numFeatureSamples = -1;
+    _trainer->sortParentNodes = true;
 }
 
 void JungleTrainer::Factory::init(JungleTrainer::ptr _trainer)

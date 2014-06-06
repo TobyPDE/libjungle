@@ -8,6 +8,8 @@
 
 using namespace JunglePP;
 
+float classCounts[] = {5923, 6742, 5958, 6131, 5842, 5421, 5918, 6265, 5851, 5949};
+
 PredictionResult::ptr DAGNode::predict(DataPoint::ptr featureVector) const
 {
     // Get the leaf node
@@ -60,14 +62,16 @@ PredictionResult::ptr Jungle::predict(DataPoint::ptr featureVector) const
             // If this class has no relevance, don't cast any votes
             if (hist->at(i) <= 0) continue;
             
+            float score = 1;
+            
             // Did we already encounter this class?
             if (votes.find(i) != votes.end())
             {
-                votes[i] = votes[i] + 1;
+                votes[i] = votes[i] + score;
             }
             else
             {
-                votes[i] = 1;
+                votes[i] = score;
             }
         }
     }
@@ -282,12 +286,6 @@ Jungle::ptr Jungle::Factory::createFromFile(const std::string& _filename, bool _
 
 DAGNode::ptr DAGNode::Factory::unserialize(const std::vector<std::string> & row)
 {
-    // There must be exactly 8 entries in the vector. Otherwise the model is corrupt
-    if (row.size() != 8)
-    {
-        throw RuntimeException("Invalid model row.");
-    }
-    
     // Row structure
     // 0         1         2            3            4                5                 6              7 
     // [nodeID], [isRoot], [featureID], [threshold], [left child ID], [right child ID], [class label], "[class histogram]"
