@@ -163,7 +163,7 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     // Initialize the parent level
     // We need a counter in order to assign the parent to some virtual children
     int vChildren = 0;
-    for (NodeRow::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
+    for (NodeRow::reverse_iterator iter = parentNodes.rbegin(); iter != parentNodes.rend(); ++iter)
     {
         (*iter)->setThreshold(0);
         (*iter)->setFeatureID(0);
