@@ -1,0 +1,171 @@
+Settings dump:
+numFeatureSamples -1
+maxDepth 40
+maxWidth 128
+useBagging 0
+maxLevelIterations 35
+useStochasticThreshold 0
+useStochasticChildNodeAssignment 0
+numDAGs 30
+numTrainingSamples -1
+
+Loading training set
+Loading validation set
+
+Start training
+Number of training examples: 60000
+Number of DAGs to train: 30
+Train DAG 1/30
+Train DAG 5/30
+Train DAG 29/30
+Train DAG 21/30
+Train DAG 9/30
+Train DAG 25/30
+Train DAG 13/30
+Train DAG 17/30
+DAG completed
+Training error: 0.000116667
+Test error: 0.1158
+----------------------------
+Train DAG 18/30
+DAG completed
+Training error: 0
+Test error: 0.113
+----------------------------
+Train DAG 22/30
+DAG completed
+Training error: 0
+Test error: 0.0797
+----------------------------
+Train DAG 2/30
+DAG completed
+Training error: 0
+Test error: 0.0645
+----------------------------
+Train DAG 30/30
+DAG completed
+Training error: 0
+Test error: 0.0565
+----------------------------
+Train DAG 10/30
+DAG completed
+Training error: 0
+Test error: 0.0501
+----------------------------
+Train DAG 6/30
+DAG completed
+Training error: 0
+Test error: 0.0499
+----------------------------
+Train DAG 26/30
+DAG completed
+Training error: 0
+Test error: 0.0466
+----------------------------
+Train DAG 14/30
+DAG completed
+Training error: 0
+Test error: 0.0461
+----------------------------
+Train DAG 3/30
+DAG completed
+Training error: 0
+Test error: 0.0436
+----------------------------
+Train DAG 23/30
+DAG completed
+Training error: 0
+Test error: 0.0413
+----------------------------
+Train DAG 15/30
+DAG completed
+Training error: 0
+Test error: 0.0407
+----------------------------
+DAG completed
+Training error: 0
+Test error: 0.0401
+----------------------------
+Train DAG 7/30
+Train DAG 11/30
+DAG completed
+Training error: 0
+Test error: 0.0376
+----------------------------
+Train DAG 19/30
+DAG completed
+Training error: 0
+Test error: 0.0376
+----------------------------
+DAG completed
+Training error: 0
+Test error: 0.037
+----------------------------
+Train DAG 27/30
+DAG completed
+Training error: 0
+Test error: 0.0371
+----------------------------
+Train DAG 12/30
+DAG completed
+Training error: 0
+Test error: 0.0369
+----------------------------
+Train DAG 4/30
+DAG completed
+Training error: 0
+Test error: 0.0352
+----------------------------
+Train DAG 8/30
+DAG completed
+Training error: 0
+Test error: 0.0354
+----------------------------
+Train DAG 24/30
+DAG completed
+Training error: 0
+Test error: 0.0347
+----------------------------
+Train DAG 20/30
+DAG completed
+Training error: 0
+Test error: 0.0348
+----------------------------
+Train DAG 16/30
+DAG completed
+Training error: 0
+Test error: 0.0346
+----------------------------
+Train DAG 28/30
+DAG completed
+Training error: 0
+Test error: 0.0345
+----------------------------
+DAG completed
+Training error: 0
+Test error: 0.0337
+----------------------------
+DAG completed
+Training error: 0
+Test error: 0.0338
+----------------------------
+DAG completed
+Training error: 0
+Test error: 0.0332
+----------------------------
+DAG completed
+Training error: 0
+Test error: 0.0329
+----------------------------
+DAG completed
+Training error: 0
+Test error: 0.0331
+----------------------------
+DAG completed
+Training error: 0
+Test error: 0.0322
+----------------------------
+Training time: 17961.6s
+
+Training error: 0
+Test error: 0.0322
