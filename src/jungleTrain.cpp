@@ -650,8 +650,6 @@ DAGTrainer::ptr DAGTrainer::Factory::createFromJungleTrainer(JungleTrainer::ptr 
     result->setNumFeatureSamples(_jungleTrainer->getNumFeatureSamples());
     result->setUseBagging(_jungleTrainer->getUseBagging());
     result->setMaxLevelIterations(_jungleTrainer->getMaxLevelIterations());
-    result->setUseStochasticThreshold(_jungleTrainer->getUseStochasticThreshold());
-    result->setUseStochasticChildNodeAssignment(_jungleTrainer->getUseStochasticChildNodeAssignment());
     result->setValidationLevel(_jungleTrainer->getValidationLevel());
     result->setValidationSet(_jungleTrainer->getValidationSet());
     result->setSortParentNodes(_jungleTrainer->getSortParentNodes());
@@ -667,8 +665,6 @@ void AbstractTrainer::Factory::init(AbstractTrainer::ptr _trainer)
     _trainer->verboseMode = false;
     _trainer->useBagging = false;
     _trainer->maxLevelIterations = 55;
-    _trainer->useStochasticThreshold = false;
-    _trainer->useStochasticChildNodeAssignment = false;
     _trainer->validationLevel = 0;
     // -1 means that the number of features to sample will be determined automatically
     _trainer->numFeatureSamples = -1;

@@ -404,16 +404,6 @@ namespace JunglePP {
         int maxLevelIterations;
         
         /**
-         * True, if stochastic threshold estimation shall be used
-         */
-        bool useStochasticThreshold;
-        
-        /**
-         * True, if the child node assignment shall be perform stochastically
-         */
-        bool useStochasticChildNodeAssignment;
-        
-        /**
          * The validation level
          */
         int validationLevel;
@@ -529,46 +519,6 @@ namespace JunglePP {
         int getMaxLevelIterations()
         {
             return maxLevelIterations;
-        }
-        
-        /**
-         * Sets useStochasticThreshold
-         * 
-         * @param _useStochasticThreshold
-         */
-        void setUseStochasticThreshold(bool _useStochasticThreshold)
-        {
-            useStochasticThreshold = _useStochasticThreshold;
-        }
-        
-        /**
-         * Returns useStochasticThreshold
-         * 
-         * @return useStochasticThreshold
-         */
-        bool getUseStochasticThreshold()
-        {
-            return useStochasticThreshold;
-        }
-        
-        /**
-         * Sets useStochasticChildNodeAssignment
-         * 
-         * @param _useStochasticChildNodeAssignment
-         */
-        void setUseStochasticChildNodeAssignment(bool _useStochasticChildNodeAssignment)
-        {
-            useStochasticChildNodeAssignment = _useStochasticChildNodeAssignment;
-        }
-        
-        /**
-         * Returns useStochasticChildNodeAssignment
-         * 
-         * @return useStochasticChildNodeAssignment
-         */
-        bool getUseStochasticChildNodeAssignment()
-        {
-            return useStochasticChildNodeAssignment;
         }
         
         /**

@@ -286,14 +286,6 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
                 _trainer->setMaxLevelIterations(ParameterConverter::getInt(it->second));
                 break;
                 
-            case 't':
-                _trainer->setUseStochasticThreshold(ParameterConverter::getBool(it->second));
-                break;
-                
-            case 'c':
-                _trainer->setUseStochasticChildNodeAssignment(ParameterConverter::getBool(it->second));
-                break;
-                
             case 'P':
                 _trainer->setSortParentNodes(ParameterConverter::getBool(it->second));
                 break;
@@ -351,8 +343,6 @@ int TrainCLIFunction::execute()
         std::cout << "maxWidth " << jungleTrainer->getMaxWidth() << std::endl;
         std::cout << "useBagging " << jungleTrainer->getUseBagging() << std::endl;
         std::cout << "maxLevelIterations " << jungleTrainer->getMaxLevelIterations() << std::endl;
-        std::cout << "useStochasticThreshold " << jungleTrainer->getUseStochasticThreshold() << std::endl;
-        std::cout << "useStochasticChildNodeAssignment " << jungleTrainer->getUseStochasticChildNodeAssignment() << std::endl;
         std::cout << "numDAGs " << jungleTrainer->getNumDAGs() << std::endl;
         std::cout << "numTrainingSamples " << jungleTrainer->getNumTrainingSamples() << std::endl;
         std::cout << "sortParentNodes " << jungleTrainer->getSortParentNodes() << std::endl << std::endl;
@@ -416,8 +406,6 @@ const char* TrainCLIFunction::help()
             " -W [int]      Maximum width of each DAG\n"
             " -B [bool]     Whether of not to use bagging. See also -N\n"
             " -I [int]      Maximum number of iterations at each level\n"
-            " -t [bool]     Whether or not to use stochastic threshold selection\n"
-            " -c [bool]     Whether or not to use stochastic child node assignment optimization\n"
             " -P [bool]     Whether or not the parent nodes shall be sorted by their entropy\n"
             " -V [string]   The filename of a validation set\n"
             " -v [int]      Validation level. 1: After training, 2: After each DAG, 3: After each level \n\n"
