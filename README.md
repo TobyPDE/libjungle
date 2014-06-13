@@ -12,9 +12,9 @@ the following tools installed
 Execute the following commands in your shell in order to download and compile the
 code:
 ```shell
-$ hg clone https://bitbucket.org/geekStack/lib-jungle
+$ hg clone https://bitbucket.org/geekStack/libjungle
 # Change to the code directory
-$ cd lib-jungle
+$ cd libjungle
 # We don't want to have objects files mixed with source files in one directory
 # Hence, we compile the project in a build directory
 $ mkdir build
@@ -96,7 +96,7 @@ Please cite the code as follows, if you use it in a publication:
 @misc{TPDJ, 
    author = {Tobias Pohlen}, 
    title = {LibJungle - Decision Jungle Library}, 
-   howpublished = {\url{https://bitbucket.org/geekStack/jungle}} 
+   howpublished = {\url{https://bitbucket.org/geekStack/libjungle}} 
 } 
 ```
 
