@@ -92,7 +92,7 @@ Further information under: https://code.google.com/p/fastapprox/
 
 ## Miscellaneous
 Please cite the code as follows, if you use it in a publication:
-```
+```bibtex
 @misc{TPDJ, 
    author = {Tobias Pohlen}, 
    title = {LibJungle - Decision Jungle Library}, 
