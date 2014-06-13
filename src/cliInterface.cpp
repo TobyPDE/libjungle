@@ -318,6 +318,7 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
 int TrainCLIFunction::execute()
 {
     dumpSettings = false;
+    validationLevel = 0;
     
     // There must be a model file and a training set
     if (getArguments()->getArguments().size() != 2)
@@ -356,7 +357,7 @@ int TrainCLIFunction::execute()
     // If there is a validation set, load it
     if (validationLevel > 0 && validationSetFileName != "")
     {
-        std::cout << "Loading validation set" << std::endl;
+        std::cout << "Loading test set" << std::endl;
         testSet = TrainingSet::Factory::createFromFile(validationSetFileName, false);
         jungleTrainer->setValidationSet(testSet);
     }

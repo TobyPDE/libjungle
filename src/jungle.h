@@ -207,11 +207,12 @@ namespace JunglePP
                 histogram = 0;
             }
             
+            bins = _classCount;
+            
             // Only allocate a new histogram, if there is more than one class
             if (_classCount > 0)
             {
                 histogram = new int[_classCount];
-                bins = _classCount;
                 
                 // Initialize the histogram
                 for (int i = 0; i < bins; i++)
@@ -732,6 +733,7 @@ namespace JunglePP
         void initParameters();
         
     public:
+        DAGNode() : classHistogram() {}
         virtual ~DAGNode() {}
         
         /**
@@ -765,7 +767,8 @@ namespace JunglePP
             
             for (std::set<DAGNode::ptr>::iterator it = deletionSet.begin(); it != deletionSet.end(); ++it)
             {
-                delete *it;
+                DAGNode::ptr node = *it;
+                delete node;
             }
         }
         
@@ -988,6 +991,7 @@ namespace JunglePP
                 node->setClassLabel(0);
                 node->setLeft(0);
                 node->setRight(0);
+                node->getClassHistogram()->resize(classCount);
             }
             
         public:
@@ -1015,7 +1019,8 @@ namespace JunglePP
              * Unserializes a node from a model file
              */
             static DAGNode::ptr unserialize(const std::vector<std::string> & row);
-        };        
+        };
+        friend class DAGNode::Factory;
     };
     
     /**

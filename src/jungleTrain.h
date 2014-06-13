@@ -238,6 +238,8 @@ namespace JunglePP {
         typedef TrainingDAGNode self;
         typedef self* ptr;
         
+        TrainingDAGNode() : DAGNode(), leftHistogram(), rightHistogram() {}
+        
         /**
          * Computes the left and right histograms
          */
