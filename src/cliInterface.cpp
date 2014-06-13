@@ -301,6 +301,10 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
             case 'v':
                 validationLevel = ParameterConverter::getInt(it->second);
                 break;
+                
+            case 'p':
+                showProgressBars = ParameterConverter::getBool(it->second);
+                break;
         }
         
         validationLevel = std::max(std::abs(validationLevel), 0);
@@ -317,6 +321,7 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
 
 int TrainCLIFunction::execute()
 {
+    showProgressBars = true;
     dumpSettings = false;
     validationLevel = 0;
     
@@ -351,14 +356,14 @@ int TrainCLIFunction::execute()
     
     // Load the training set
     std::cout << "Loading training set" << std::endl;
-    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), false);
+    TrainingSet::ptr trainingSet = TrainingSet::Factory::createFromFile(getArguments()->getArguments().at(0), showProgressBars);
     TrainingSet::ptr testSet;
     
     // If there is a validation set, load it
     if (validationLevel > 0 && validationSetFileName != "")
     {
         std::cout << "Loading test set" << std::endl;
-        testSet = TrainingSet::Factory::createFromFile(validationSetFileName, false);
+        testSet = TrainingSet::Factory::createFromFile(validationSetFileName, showProgressBars);
         jungleTrainer->setValidationSet(testSet);
     }
     
@@ -409,7 +414,8 @@ const char* TrainCLIFunction::help()
             " -I [int]      Maximum number of iterations at each level\n"
             " -P [bool]     Whether or not the parent nodes shall be sorted by their entropy\n"
             " -V [string]   The filename of a validation set\n"
-            " -v [int]      Validation level. 1: After training, 2: After each DAG, 3: After each level \n\n"
+            " -v [int]      Validation level. 1: After training, 2: After each DAG, 3: After each level \n"
+            " -p [bool]     Whether or not the progress bars shall be displayed\n\n"
             "DESCRIPTION\n"
             " This command trains a new decision jungle on the training set\n"
             " stored in {trainingset}. The trained model will be saved in\n"
