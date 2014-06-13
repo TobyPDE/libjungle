@@ -256,11 +256,18 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
         noParentNode[i] = true;
     }
 
+    printf("child nodes: %d\n", childNodeCount);
+    
     // Assign the parent to their child nodes and set the training sets
     for (NodeRow::iterator it = parentNodes.begin(); it != parentNodes.end(); ++it)
     {
         int leftNode = (*it)->getTempLeft();
         int rightNode = (*it)->getTempRight();
+        
+        if (std::abs(childNodeCount) <= std::abs(leftNode) || std::abs(childNodeCount) <= std::abs(rightNode))
+        {
+            printf("l: %d, r: %d\n", leftNode, rightNode);
+        }
         
         // Assign the parent to the children
         (*it)->setLeft(childNodes[leftNode]);
@@ -286,6 +293,28 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
             noParentNode[rightNode] = false;
         }
     }
+    
+    // It might happen, that a threshold was selected such that a child node
+    // did not receive any training examples. In this case, unify the child nodes
+    for (NodeRow::iterator it = parentNodes.begin(); it != parentNodes.end(); ++it)
+    {
+        int leftNode = (*it)->getTempLeft();
+        int rightNode = (*it)->getTempRight();
+        
+        if (childNodes[leftNode]->getTrainingSet()->size() == 0)
+        {
+            (*it)->setLeft(childNodes[rightNode]);
+            (*it)->setTempLeft(rightNode);
+            noParentNode[leftNode] = true;
+        }
+        else if (childNodes[rightNode]->getTrainingSet()->size() == 0)
+        {
+            (*it)->setRight(childNodes[leftNode]);
+            (*it)->setTempRight(leftNode);
+            noParentNode[rightNode] = true;
+        }
+    }
+    
     
     for (int i = 0; i < childNodeCount; i++)
     {
@@ -326,7 +355,7 @@ TrainingDAGNode::ptr TrainingDAGNode::Factory::create(DAGTrainerPtr trainer)
     // Initialize the training parameters
     node->setTempLeft(0);
     node->setTempRight(0);
-    node->setClassLabel(0);
+    node->pure = false;
 
     // Initialize the histograms
     node->getLeftHistogram()->resize(trainer->getClassCount());
