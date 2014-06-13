@@ -19,7 +19,7 @@
 #include <cstdlib>
 
 
-namespace JunglePP {
+namespace LibJungle {
     /**
      * Forward declarations
      */

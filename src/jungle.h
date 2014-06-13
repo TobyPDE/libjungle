@@ -19,7 +19,7 @@
 #include <cmath>
 #define ENTROPY(p) -(p) * fastlog2(p)
 
-namespace JunglePP
+namespace LibJungle
 {
     /**
      * This exception is thrown when something unexpected happens during execution. 

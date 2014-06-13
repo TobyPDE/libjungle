@@ -16,7 +16,7 @@
  * @author Tobias Pohlen <tobias.pohlen@rwth-aachen.de>
  * @version 1.0
  */
-namespace JunglePP {
+namespace LibJungle {
     
     /**
      * Forward declarations

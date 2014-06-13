@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include "jungle.h"
 
-using namespace JunglePP;
+using namespace LibJungle;
 
 float classCounts[] = {5923, 6742, 5958, 6131, 5842, 5421, 5918, 6265, 5851, 5949};
 

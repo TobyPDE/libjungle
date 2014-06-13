@@ -17,7 +17,7 @@
 #include <boost/timer.hpp>
 
 
-using namespace JunglePP;
+using namespace LibJungle;
 
 /**
  * Register all available functions
