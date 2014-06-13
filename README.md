@@ -5,10 +5,12 @@ It implements the LSearch training algorithm with the optimizations discussed in
 ## Compile code
 If you want to use the tool, you have to compile it from source. You need to have
 the following tools installed
+
 - gcc >= 4.8 (C++ 11 compliant)
 - CMake >= 2.6
 - Boost >= 1.40.0 (Filesystem and Tokenizer)
 - openMP (no specific version. Only very basic features are required)
+
 Execute the following commands in your shell in order to download and compile the
 code:
 ```shell
