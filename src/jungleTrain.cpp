@@ -256,18 +256,11 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
         noParentNode[i] = true;
     }
 
-    printf("child nodes: %d\n", childNodeCount);
-    
     // Assign the parent to their child nodes and set the training sets
     for (NodeRow::iterator it = parentNodes.begin(); it != parentNodes.end(); ++it)
     {
         int leftNode = (*it)->getTempLeft();
         int rightNode = (*it)->getTempRight();
-        
-        if (std::abs(childNodeCount) <= std::abs(leftNode) || std::abs(childNodeCount) <= std::abs(rightNode))
-        {
-            printf("l: %d, r: %d\n", leftNode, rightNode);
-        }
         
         // Assign the parent to the children
         (*it)->setLeft(childNodes[leftNode]);

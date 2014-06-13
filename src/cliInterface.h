@@ -337,6 +337,11 @@ namespace JunglePP {
          */
         int validationLevel;
         
+        /**
+         * Whether or not the progress bars shall be displayed
+         */
+        bool showProgressBars;
+        
     public:
         /**
          * Executes the command/function
