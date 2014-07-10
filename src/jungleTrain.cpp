@@ -42,21 +42,24 @@ void DAGTrainer::validateParameters() throw(ConfigurationException)
     featureDimension = (*trainingSet->begin())->getDataPoint()->size();
     classCount = 0;
     
-    for (TrainingSet::iterator iter = trainingSet->begin(); iter != trainingSet->end(); ++iter)
+    const size_t trainingSetSize = trainingSet->size();
+    for (size_t i = 0; i < trainingSetSize; i++)
     {
-        if (static_cast<int>((*iter)->getDataPoint()->size()) != featureDimension)
+        TrainingExample* current = (*trainingSet)[i];
+        
+        if (static_cast<int>(current->getDataPoint()->size()) != featureDimension)
         {
             throw ConfigurationException("All data points must have the same feature dimension.");
         }
         // Check if all class labels are > 0
-        if ((*iter)->getClassLabel() < 0)
+        if (current->getClassLabel() < 0)
         {
             throw ConfigurationException("All class labels must be greater than or equal to 0.");
         }
         // Update the class counter
-        if (classCount < (*iter)->getClassLabel())
+        if (classCount < current->getClassLabel())
         {
-            classCount = (*iter)->getClassLabel();
+            classCount = current->getClassLabel();
         }
     }
     classCount++;
@@ -163,22 +166,24 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     // Initialize the parent level
     // We need a counter in order to assign the parent to some virtual children
     int vChildren = 0;
-    for (NodeRow::reverse_iterator iter = parentNodes.rbegin(); iter != parentNodes.rend(); ++iter)
+    const size_t parentNodeSize = parentNodes.size();
+    for (size_t i = 0; i < parentNodeSize; i++)
     {
-        (*iter)->setThreshold(0);
-        (*iter)->setFeatureID(0);
-        (*iter)->updateLeftRightHistogram();
+        TrainingDAGNode* current = parentNodes[parentNodeSize - i - 1];
+        current->setThreshold(0);
+        current->setFeatureID(0);
+        current->updateLeftRightHistogram();
         
         // Assign the child nodes
-        if ((*iter)->isPure())
+        if (current->isPure())
         {
-            (*iter)->setTempLeft(vChildren % childNodeCount);
-            (*iter)->setTempRight(vChildren++ % childNodeCount);
+            current->setTempLeft(vChildren % childNodeCount);
+            current->setTempRight(vChildren++ % childNodeCount);
         }
         else
         {
-            (*iter)->setTempLeft(vChildren++ % childNodeCount);
-            (*iter)->setTempRight(vChildren++ % childNodeCount);
+            current->setTempLeft(vChildren++ % childNodeCount);
+            current->setTempRight(vChildren++ % childNodeCount);
         }
     }
     
@@ -189,13 +194,14 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     do
     {
         change = false;
-        for (NodeRow::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
+        for (size_t i = 0; i < parentNodeSize; i++)
         {
+            TrainingDAGNode* current = parentNodes[i];
             // Pure nodes don't need a threshold
-            if ((*iter)->isPure()) continue;
+            if (current->isPure()) continue;
             
             // Find the new optimal threshold
-            if ((*iter)->findThreshold(parentNodes))
+            if (current->findThreshold(parentNodes))
             {
                 change = true;
             }
@@ -205,13 +211,14 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
         // done at this point
         if (isTreeLevel) break;
         
-        for (NodeRow::iterator iter = parentNodes.begin(); iter != parentNodes.end(); ++iter)
+        for (size_t i = 0; i < parentNodeSize; i++)
         {
+            TrainingDAGNode* current = parentNodes[i];
             // Pure nodes must have left=right
-            if ((*iter)->isPure())
+            if (current->isPure())
             {
                 // Find the new optimal child assignment for both pointers
-                if ((*iter)->findCoherentChildNodeAssignment(parentNodes, childNodeCount))
+                if (current->findCoherentChildNodeAssignment(parentNodes, childNodeCount))
                 {
                     change = true;
                 }
@@ -219,12 +226,12 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
             else
             {
                 // Find the new optimal child assignment for the left pointer
-                if ((*iter)->findRightChildNodeAssignment(parentNodes, childNodeCount))
+                if (current->findRightChildNodeAssignment(parentNodes, childNodeCount))
                 {
                     change = true;
                 }
                 // Find the new optimal child assignment for the right pointer
-                if ((*iter)->findLeftChildNodeAssignment(parentNodes, childNodeCount))
+                if (current->findLeftChildNodeAssignment(parentNodes, childNodeCount))
                 {
                     change = true;
                 }
@@ -257,30 +264,34 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     }
 
     // Assign the parent to their child nodes and set the training sets
-    for (NodeRow::iterator it = parentNodes.begin(); it != parentNodes.end(); ++it)
+    for (size_t i = 0; i < parentNodeSize; i++)
     {
-        int leftNode = (*it)->getTempLeft();
-        int rightNode = (*it)->getTempRight();
+        TrainingDAGNode* current = parentNodes[i];
+        int leftNode = current->getTempLeft();
+        int rightNode = current->getTempRight();
         
         // Assign the parent to the children
-        (*it)->setLeft(childNodes[leftNode]);
-        (*it)->setRight(childNodes[rightNode]);
+        current->setLeft(childNodes[leftNode]);
+        current->setRight(childNodes[rightNode]);
 
         // Propagate the training set
-        TrainingSet::ptr parentTrainingSet = (*it)->getTrainingSet();
-
-        for (TrainingSet::iterator tit = parentTrainingSet->begin(); tit != parentTrainingSet->end(); ++tit)
+        TrainingSet::ptr parentTrainingSet = current->getTrainingSet();
+        const size_t parentTrainingSetSize = parentTrainingSet->size();
+        
+        for (size_t j = 0; j < parentTrainingSetSize; j++)
         {
+            TrainingExample* currentTrainingExample = parentTrainingSet->at(j);
             // Determine whether or not this example belongs to the left or right child node
-            if ((*(*tit)->getDataPoint())[(*it)->getFeatureID()] <= (*it)->getThreshold())
+            const float featureValue = currentTrainingExample->getDataPoint()->at(current->getFeatureID());
+            if (featureValue <= current->getThreshold())
             {
                 // Left child node
-                childNodes[leftNode]->getTrainingSet()->push_back(*tit);
+                childNodes[leftNode]->getTrainingSet()->push_back(currentTrainingExample);
             }
             else
             {
                 // Right child node
-                childNodes[rightNode]->getTrainingSet()->push_back(*tit);
+                childNodes[rightNode]->getTrainingSet()->push_back(currentTrainingExample);
             }
             noParentNode[leftNode] = false;
             noParentNode[rightNode] = false;
@@ -289,21 +300,22 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
     
     // It might happen, that a threshold was selected such that a child node
     // did not receive any training examples. In this case, unify the child nodes
-    for (NodeRow::iterator it = parentNodes.begin(); it != parentNodes.end(); ++it)
+    for (size_t i = 0; i < parentNodeSize; i++)
     {
-        int leftNode = (*it)->getTempLeft();
-        int rightNode = (*it)->getTempRight();
+        TrainingDAGNode* current = parentNodes[i];
+        int leftNode = current->getTempLeft();
+        int rightNode = current->getTempRight();
         
         if (childNodes[leftNode]->getTrainingSet()->size() == 0)
         {
-            (*it)->setLeft(childNodes[rightNode]);
-            (*it)->setTempLeft(rightNode);
+            current->setLeft(childNodes[rightNode]);
+            current->setTempLeft(rightNode);
             noParentNode[leftNode] = true;
         }
         else if (childNodes[rightNode]->getTrainingSet()->size() == 0)
         {
-            (*it)->setRight(childNodes[leftNode]);
-            (*it)->setTempRight(leftNode);
+            current->setRight(childNodes[leftNode]);
+            current->setTempRight(leftNode);
             noParentNode[rightNode] = true;
         }
     }
@@ -332,7 +344,7 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
             returnChildNodes.push_back(childNodes[i]);
         }
     }
-
+    delete[] noParentNode;
     return returnChildNodes;
 }
 
@@ -411,9 +423,12 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
     // Iterate over all sampled features
     std::vector<int> sampledFeatures;
     trainer->getSampledFeatures(sampledFeatures);
-    for (std::vector<int>::iterator fit = sampledFeatures.begin(); fit != sampledFeatures.end(); ++fit)
+    const size_t sampledFeaturesSize = sampledFeatures.size();
+    const size_t trainingSetSize = trainingSet->size();
+    for (size_t i = 0; i < sampledFeaturesSize; i++)
     {
-        setFeatureID(*fit);
+        const int feature = sampledFeatures[i];
+        setFeatureID(feature);
         
         // Sort the training set according to the current feature dimension
         TrainingExampleComparator compare(getFeatureID());
@@ -423,22 +438,24 @@ bool TrainingDAGNode::findThreshold(NodeRow & parentNodes)
         error.resetHistograms();
         
         // Test all possible splits
-        for (TrainingSet::iterator it = trainingSet->begin(); it != trainingSet->end() - 1; ++it)
+        for (size_t j = 0; j < trainingSetSize - 1; j++)
         {
+            TrainingExample* it = trainingSet->at(j);
+            TrainingExample* itp1 = trainingSet->at(j+1);
             // Choose the threshold as value between the two adjacent elements
-            setThreshold( ( (*it)->getDataPoint()->at(getFeatureID()) + (*(it + 1))->getDataPoint()->at(getFeatureID()) ) / 2 );
+            setThreshold( (it->getDataPoint()->at(feature) + itp1->getDataPoint()->at(feature) ) / 2 );
             
             // Update the histograms
-            error.move((*it)->getClassLabel());
+            error.move(it->getClassLabel());
             
             // Get the current entropy
             currentEntropy = error.error();
             
             // Only accept the split if the entropy decreases and the threshold is not insignificant
-            if (currentEntropy < bestEntropy && ( (*(it + 1))->getDataPoint()->at(getFeatureID()) - (*it)->getDataPoint()->at(getFeatureID())) >= 1e-6)
+            if (currentEntropy < bestEntropy && ( itp1->getDataPoint()->at(feature) - it->getDataPoint()->at(feature)) >= 1e-6)
             {
                 // Select this feature and this threshold
-                bestFeatureID = getFeatureID();
+                bestFeatureID = feature;
                 bestThreshold = getThreshold();
                 bestEntropy = currentEntropy;
                 changed = true;
@@ -794,18 +811,21 @@ void TrainingDAGNode::updateLeftRightHistogram()
     leftHistogram.reset();
     rightHistogram.reset();
 
-    for (TrainingSet::iterator tit = trainingSet->begin(); tit != trainingSet->end(); ++tit)
+    const size_t trainingSetSize = trainingSet->size();
+    for(size_t i = 0; i < trainingSetSize; i++)
     {
+        TrainingExample* current = trainingSet->at(i);
+        
         // Determine whether or not this example belongs to the left or right child node
-        if ((*tit)->getDataPoint()->at(getFeatureID()) <= getThreshold())
+        if (current->getDataPoint()->at(getFeatureID()) <= getThreshold())
         {
             // Left child node
-            leftHistogram.addOne((*tit)->getClassLabel());
+            leftHistogram.addOne(current->getClassLabel());
         }
         else
         {
             // Right child node
-            rightHistogram.addOne((*tit)->getClassLabel());
+            rightHistogram.addOne(current->getClassLabel());
         }
     }
 }

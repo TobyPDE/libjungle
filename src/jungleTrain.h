@@ -1415,9 +1415,11 @@ namespace LibJungle {
             _hist.reset();
             
             // Compute the histogram
-            for (TrainingSet::iterator i = _trainingSet->begin(); i != _trainingSet->end(); ++i)
+            const size_t trainingSetSize = _trainingSet->size();
+            for(size_t i = 0; i < trainingSetSize; i++)
             {
-                _hist.add((*i)->getClassLabel(), 1);
+                TrainingExample* current = _trainingSet->at(i);
+                _hist.add(current->getClassLabel(), 1);
             }
         }
         
