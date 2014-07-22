@@ -298,6 +298,11 @@ NodeRow DAGTrainer::trainLevel(NodeRow &parentNodes, int childNodeCount)
         }
     }
     
+    for (size_t j = 0; j < parentNodeSize; j++)
+    {
+        parentNodes[j]->getTrainingSet()->clear();
+    }
+
     // It might happen, that a threshold was selected such that a child node
     // did not receive any training examples. In this case, unify the child nodes
     for (size_t i = 0; i < parentNodeSize; i++)

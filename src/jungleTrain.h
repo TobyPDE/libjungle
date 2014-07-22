@@ -11,7 +11,7 @@
 #include "jungle.h"
 
 /**
- * This file everything that is important for training a jungle
+ * This file contains everything that is important for training a jungle
  * 
  * @author Tobias Pohlen <tobias.pohlen@rwth-aachen.de>
  * @version 1.0
@@ -75,7 +75,7 @@ namespace LibJungle {
             return *this;
         }
         
-        virtual ~TrainingExample()\
+        virtual ~TrainingExample()
         {
             delete dataPoint;
         }
@@ -197,7 +197,7 @@ namespace LibJungle {
     };
     
     /**
-     * This version of a DAG node is used during training. It some additional information such as a list of data points
+     * This version of a DAG node is used during training. It contains some additional information such as a list of data points
      * at this node and provides some additional functions. 
      */
     class TrainingDAGNode : public DAGNode {
@@ -261,7 +261,6 @@ namespace LibJungle {
          */
         TrainingDAGNode(const TrainingDAGNode& other) : 
                 trainingSet(other.trainingSet), 
-                // FIXME: The histograms should be copied
                 leftHistogram(other.leftHistogram), 
                 rightHistogram(other.rightHistogram), 
                 pure(false) {}
@@ -423,7 +422,7 @@ namespace LibJungle {
         
     protected:
         /**
-         * Validates all parameters and throws an exception is some parameters are invalid
+         * Validates all parameters and throws an exception if some parameters are invalid
          * 
          * @throws ConfigurationException If the configuration is invalid
          */
@@ -629,7 +628,7 @@ namespace LibJungle {
     };
     
     /**
-     * Trains a single DAG on a training set using the LSearch algorithm proposed in [1]. The width is controlled as
+     * Trains a single DAG on a training set using the LSearch algorithm proposed in [1]. The width is controlled by
      * min(2^l, maxWidth) where l is the current level
      */
     class DAGTrainer : public AbstractTrainer {
@@ -741,7 +740,7 @@ namespace LibJungle {
     };
     
     /**
-     * This is a trainer for decision jungle
+     * This is a trainer for decision jungles
      */
     class JungleTrainer : public AbstractTrainer {
     private:
