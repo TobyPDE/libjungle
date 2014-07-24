@@ -355,6 +355,7 @@ int TrainCLIFunction::execute()
         std::cout << "maxLevelIterations " << jungleTrainer->getMaxLevelIterations() << std::endl;
         std::cout << "numDAGs " << jungleTrainer->getNumDAGs() << std::endl;
         std::cout << "numTrainingSamples " << jungleTrainer->getNumTrainingSamples() << std::endl;
+        std::cout << "maxParallel " << jungleTrainer->getMaxParallel() << std::endl;
         std::cout << "sortParentNodes " << jungleTrainer->getSortParentNodes() << std::endl << std::endl;
     }
     
