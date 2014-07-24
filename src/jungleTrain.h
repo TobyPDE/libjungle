@@ -753,6 +753,11 @@ namespace LibJungle {
          * Number of training samples per DAG
          */
         int numTrainingSamples;
+        
+        /**
+         * Maximum number of DAGs to train in parallel
+         */
+        int maxParallel;
     public:
         
         typedef JungleTrainer self;
@@ -799,6 +804,26 @@ namespace LibJungle {
         int getNumDAGs()
         {
             return numDAGs;
+        }
+        
+        /**
+         * Sets maxParallel
+         * 
+         * @param _maxParallel
+         */
+        void setMaxParallel(int _maxParallel)
+        {
+            maxParallel = _maxParallel;
+        }
+        
+        /**
+         * Returns maxParallel
+         * 
+         * @return maxParallel
+         */
+        int getMaxParallel() const 
+        {
+            return maxParallel;
         }
         
         /**
