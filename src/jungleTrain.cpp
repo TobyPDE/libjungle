@@ -722,7 +722,7 @@ void JungleTrainer::Factory::init(JungleTrainer::ptr _trainer)
     // -1 means that the number of features to sample will be determined automatically
     _trainer->numTrainingSamples = -1;
     _trainer->numDAGs = 1;
-    _trainer->maxParallel = 16;
+    _trainer->maxParallel = 8;
 }
 
 Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(ConfigurationException, RuntimeException)
@@ -749,7 +749,7 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
     // Display some error statistics
     TrainingStatistics::ptr statisticsTool = TrainingStatistics::Factory::create();
 
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(getMaxParallel())
     for (int i = 0; i < numDAGs; i++)
     {
         #pragma omp critical
