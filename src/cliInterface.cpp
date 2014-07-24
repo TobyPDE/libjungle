@@ -297,6 +297,10 @@ void TrainCLIFunction::loadParametersToTrainer(JungleTrainer::ptr _trainer)
             case 'V':
                 validationSetFileName = it->second;
                 break;
+                
+            case 'T':
+                _trainer->setMaxParallel(ParameterConverter::getInt((it->second)));
+                break;
                
             case 'v':
                 validationLevel = ParameterConverter::getInt(it->second);
@@ -415,6 +419,7 @@ const char* TrainCLIFunction::help()
             " -P [bool]     Whether or not the parent nodes shall be sorted by their entropy\n"
             " -V [string]   The filename of a validation set\n"
             " -v [int]      Validation level. 1: After training, 2: After each DAG, 3: After each level \n"
+            " -T [int]      Maximum number of DAGs to train parallel\n"
             " -p [bool]     Whether or not the progress bars shall be displayed\n\n"
             "DESCRIPTION\n"
             " This command trains a new decision jungle on the training set\n"

@@ -722,6 +722,7 @@ void JungleTrainer::Factory::init(JungleTrainer::ptr _trainer)
     // -1 means that the number of features to sample will be determined automatically
     _trainer->numTrainingSamples = -1;
     _trainer->numDAGs = 1;
+    _trainer->maxParallel = 16;
 }
 
 Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(ConfigurationException, RuntimeException)
@@ -766,7 +767,7 @@ Jungle::ptr JungleTrainer::train(TrainingSet::ptr trainingSet) throw(Configurati
             sampledSet = TrainingSet::Factory::createBySampling(trainingSet, numTrainingSamples);
         }
         
-        DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(this, sampledSet);\
+        DAGTrainer::ptr trainer = DAGTrainer::Factory::createFromJungleTrainer(this, sampledSet);
         TrainingDAGNode::ptr dag = trainer->train();
 
         #pragma omp critical
