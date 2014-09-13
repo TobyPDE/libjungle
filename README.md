@@ -43,9 +43,9 @@ You can use the tool for learning decision jungles as well as classifying new da
 based on an already learned model. Please see ```./jungle help [command]``` for 
 detailed information about the arguments individual commands accept. 
 
-### Learn a jungle
-You can use the 'learn' command in order to learn a new jungle. The following
-command will learn a decision jungle of 8 DAGs from the file `training_set.txt`
+### Train a jungle
+You can use the 'train' command in order to train a new jungle. The following
+command will train a decision jungle of 8 DAGs from the file `training_set.txt`
 and will save the model to the file `model.txt`:
 ```shell
 $ ./jungle train training_set.txt model.txt -M=8
@@ -95,7 +95,7 @@ Please cite the code as follows, if you use it in a publication:
 @misc{TPDJ, 
    author = {Tobias Pohlen}, 
    title = {{L}ib{J}ungle - {D}ecision {J}ungle {L}ibrary}, 
-   howpublished = {\url{https://bitbucket.org/geekStack/libjungle}} 
+   howpublished = {\url{https://bitbucket.org/geekStack/libjungle}
 } 
 ```
 
