@@ -95,7 +95,7 @@ Please cite the code as follows, if you use it in a publication:
 @misc{TPDJ, 
    author = {Tobias Pohlen}, 
    title = {{L}ib{J}ungle - {D}ecision {J}ungle {L}ibrary}, 
-   howpublished = {\url{https://bitbucket.org/geekStack/libjungle}
+   howpublished = {\url{https://bitbucket.org/geekStack/libjungle}}
 } 
 ```
 
